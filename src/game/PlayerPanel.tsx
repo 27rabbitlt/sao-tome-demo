@@ -1,117 +1,100 @@
 // São Tomé Island Farmers - Player Panel Component
-import type { Player, Land, GameState, NightActionType } from './types';
-import { CONSTANTS } from './types';
+import type { GameState, Player, SecretAction } from './core_data_structure';
 
 interface PlayerPanelProps {
-  player: Player;
+  player: Player & { name?: string };
   isCurrentTurn: boolean;  // Is it this player's turn?
   isMyPlayer: boolean;     // Is this the player I control?
   canAct: boolean;         // Can I perform actions right now?
   gameState: GameState;
   moves: {
-    plantCocoa: (landId: string) => void;
-    harvestCocoa: (landId: string) => void;
-    cutTree: (landId: string) => void;
-    improveLand: (landId: string) => void;
-    endTurn: () => void;
-    setNightAction: (action: { type: NightActionType; targetPlayerId?: string }) => void;
+    farmCocoa?: (targetPlayerId: string) => void;
+    transferResource?: (targetPlayerId: string, resource: 'COCOA' | 'TIMBER', amount: number) => void;
+    logBuffer?: () => void;
+    extendFarm?: (targetCellId: string) => void;
+    abandonFarm?: (targetCellId: string) => void;
+    huntSnail?: (zone: 'CORE' | 'BUFFER') => void;
+    joinCoop?: () => void;
+    retrieveWorker?: () => void;
+    doNothing?: () => void;
+    steal?: (targetPlayerId: number, amount: number) => void;
+    illegalLog?: (zone: 'CORE' | 'BUFFER', amount: number) => void;
   };
-  allPlayers: Player[];
+  allPlayers: (Player & { name?: string })[];
 }
 
-function LandCard({ 
-  land, 
+function LandCellDisplay({ 
+  cell, 
   canAct,
-  isDayPhase,
-  hasActionPoints,
-  onPlant,
-  onHarvest,
-  onCut,
-  onImprove,
-  hasWood,
+  isActionPhase,
+  hasActionsLeft,
+  onExtend,
+  onAbandon,
+  hasResources,
+  playerId,
 }: { 
-  land: Land; 
+  cell: GameState['cells'][0];
   canAct: boolean;
-  isDayPhase: boolean;
-  hasActionPoints: boolean;
-  onPlant: () => void;
-  onHarvest: () => void;
-  onCut: () => void;
-  onImprove: () => void;
-  hasWood: boolean;
+  isActionPhase: boolean;
+  hasActionsLeft: boolean;
+  onExtend: () => void;
+  onAbandon: () => void;
+  hasResources: boolean;
+  playerId: number;
 }) {
-  const qualityStars = '⭐'.repeat(land.quality);
-  const growthIndicator = land.hasCocoa 
-    ? ['🌱', '🌿', '🌳', '🍫'][land.cocoaGrowthStage] 
-    : '🏜️';
-
-  const showActions = canAct && isDayPhase && hasActionPoints;
+  const isOwned = cell.owner === String(playerId);
+  const isEmpty = cell.type === 'EMPTY';
 
   return (
-    <div className={`land-card quality-${land.quality}`}>
-      <div className="land-header">
-        <span className="land-quality">{qualityStars}</span>
-        {land.hasTree && <span className="land-tree">🌲</span>}
+    <div className={`land-cell ${cell.type} ${isOwned ? 'owned' : ''}`}>
+      <div className="cell-header">
+        <span className="cell-id">{cell.id}</span>
+        <span className="cell-type">
+          {cell.type === 'FARM' && '🌾'}
+          {cell.type === 'EMPTY' && '🏜️'}
+        </span>
       </div>
-      <div className="land-status">
-        <span className="growth-indicator">{growthIndicator}</span>
-        {land.hasCocoa && (
-          <span className="growth-stage">
-            {land.cocoaGrowthStage < 3 ? `${land.cocoaGrowthStage}/3` : '可收获!'}
-          </span>
+      <div className="cell-info">
+        {cell.type === 'FARM' && (
+          <>
+            <div className="soil-quality">
+              土壤: {cell.soilQuality === 'GOOD' ? '⭐优质' : cell.soilQuality === 'MEDIUM' ? '⭐中等' : '⭐劣质'}
+            </div>
+            <div className="cell-owner">所有者: 玩家 {cell.owner}</div>
+          </>
+        )}
+        {isEmpty && canAct && isActionPhase && hasActionsLeft && hasResources && (
+          <button onClick={onExtend} className="action-btn extend">
+            🌾 扩展农场 (1木材+1可可)
+          </button>
+        )}
+        {isOwned && canAct && isActionPhase && hasActionsLeft && (
+          <button onClick={onAbandon} className="action-btn abandon">
+            🏜️ 放弃农场 (+1木材)
+          </button>
         )}
       </div>
-      {showActions && (
-        <div className="land-actions">
-          {!land.hasCocoa && (
-            <button onClick={onPlant} className="action-btn plant">
-              🌱 种植
-            </button>
-          )}
-          {land.hasCocoa && land.cocoaGrowthStage >= 3 && (
-            <button onClick={onHarvest} className="action-btn harvest">
-              🍫 收获
-            </button>
-          )}
-          {land.hasTree && (
-            <button onClick={onCut} className="action-btn cut">
-              🪓 砍树
-            </button>
-          )}
-          {land.quality < 5 && hasWood && (
-            <button onClick={onImprove} className="action-btn improve">
-              ⬆️ 改善
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
 
-function NightActionPanel({ 
+function SecretActionPanel({ 
   player,
   moves,
   allPlayers,
   canAct,
 }: {
-  player: Player;
+  player: Player & { name?: string };
   moves: PlayerPanelProps['moves'];
-  allPlayers: Player[];
+  allPlayers: (Player & { name?: string })[];
   canAct: boolean;
 }) {
-  const otherPlayers = allPlayers.filter(p => p.id !== player.id);
   const hasSelectedAction = !!player.secretAction;
-
-  const handleAction = (type: NightActionType, targetPlayerId?: string) => {
-    if (!canAct) return;
-    moves.setNightAction({ type, targetPlayerId });
-  };
 
   if (hasSelectedAction) {
     return (
-      <div className="night-action-panel selected">
-        <h4>🌙 夜间行动已选择</h4>
+      <div className="secret-action-panel selected">
+        <h4>🌙 秘密行动已选择</h4>
         <p className="action-hint">等待其他玩家...</p>
       </div>
     );
@@ -119,70 +102,78 @@ function NightActionPanel({
 
   if (!canAct) {
     return (
-      <div className="night-action-panel waiting">
+      <div className="secret-action-panel waiting">
         <h4>🌙 等待轮到你...</h4>
       </div>
     );
   }
 
   return (
-    <div className="night-action-panel">
-      <h4>🌙 选择你的夜间行动</h4>
-      <div className="night-actions-grid">
+    <div className="secret-action-panel">
+      <h4>🌙 选择你的秘密行动</h4>
+      <div className="secret-actions-grid">
         <button 
-          className="night-action-btn sleep"
-          onClick={() => handleAction('sleep')}
+          className="secret-action-btn do-nothing"
+          onClick={() => moves.doNothing?.()}
         >
-          😴 睡觉<br/>
+          😴 什么都不做<br/>
           <small>安全无风险</small>
         </button>
         
         <button 
-          className="night-action-btn hunt"
-          onClick={() => handleAction('hunt_snails')}
+          className="secret-action-btn illegal-log"
+          onClick={() => moves.illegalLog?.('CORE', 1)}
         >
-          🐌 捕猎蜗牛<br/>
-          <small>+{CONSTANTS.SNAIL_HUNT_AMOUNT * CONSTANTS.SNAIL_TO_COCOA_RATE}可可</small>
+          🌲 非法伐木 (1棵)<br/>
+          <small>有风险，可能被抓</small>
         </button>
         
         <button 
-          className="night-action-btn logging"
-          onClick={() => handleAction('illegal_logging')}
+          className="secret-action-btn illegal-log"
+          onClick={() => moves.illegalLog?.('CORE', 2)}
         >
-          🌲 非法伐木<br/>
-          <small>+{CONSTANTS.ILLEGAL_LOGGING_WOOD}木材 (有风险)</small>
+          🌲 非法伐木 (2棵)<br/>
+          <small>有风险，可能被抓</small>
         </button>
         
         <button 
-          className="night-action-btn defense"
-          onClick={() => handleAction('set_defense')}
+          className="secret-action-btn illegal-log"
+          onClick={() => moves.illegalLog?.('CORE', 3)}
         >
-          🛡️ 设置防御<br/>
-          <small>防止偷窃/破坏</small>
+          🌲 非法伐木 (3棵)<br/>
+          <small>有风险，可能被抓</small>
         </button>
       </div>
 
-      {otherPlayers.length > 0 && (
+      {allPlayers.length > 1 && (
         <>
-          <h5>🎯 针对其他玩家</h5>
-          <div className="target-actions">
-            {otherPlayers.map(target => (
-              <div key={target.id} className="target-player">
-                <span className="target-name">{target.name}</span>
-                <button 
-                  className="night-action-btn steal small"
-                  onClick={() => handleAction('steal_cocoa', target.id)}
-                >
-                  🦝 偷窃
-                </button>
-                <button 
-                  className="night-action-btn sabotage small"
-                  onClick={() => handleAction('sabotage_land', target.id)}
-                >
-                  💀 破坏
-                </button>
-              </div>
-            ))}
+          <h5>🎯 偷窃其他玩家</h5>
+          <div className="steal-actions">
+            {allPlayers
+              .filter(target => target.id !== player.id)
+              .map(target => (
+                <div key={target.id} className="target-player">
+                  <span className="target-name">玩家 {target.id}</span>
+                  <button 
+                    className="secret-action-btn steal small"
+                    onClick={() => moves.steal?.(target.id, 1)}
+                  >
+                    偷 1 可可
+                  </button>
+                  <button 
+                    className="secret-action-btn steal small"
+                    onClick={() => moves.steal?.(target.id, 2)}
+                  >
+                    偷 2 可可
+                  </button>
+                  <button 
+                    className="secret-action-btn steal small"
+                    onClick={() => moves.steal?.(target.id, 3)}
+                  >
+                    偷 3 可可
+                  </button>
+                </div>
+              ))}
           </div>
         </>
       )}
@@ -199,26 +190,40 @@ export function PlayerPanel({
   moves,
   allPlayers,
 }: PlayerPanelProps) {
-  const isDayPhase = gameState.phase === 'day';
-  const isNightPhase = gameState.phase === 'night';
-  const hasActionPoints = player.actionPoints > 0;
-  const hasWood = player.wood >= CONSTANTS.LAND_IMPROVE_COST;
-  const maintenanceCost = player.population * CONSTANTS.POPULATION_MAINTENANCE * 
-    (gameState.ecosystemPressure >= CONSTANTS.ECOSYSTEM_THRESHOLD ? 1.5 : 1);
+  // Safety checks
+  if (!player || !gameState) {
+    return <div>加载中...</div>;
+  }
+
+  const isActionPhase = gameState.phase === 'action';
+  const isSecretPhase = gameState.phase === 'secret';
+  const hasActionsLeft = (player.actionsTaken || 0) < (player.workers || 0);
+  const remainingActions = (player.workers || 0) - (player.actionsTaken || 0);
+  const hasResources = (player.timber || 0) >= 1 && (player.cocoa || 0) >= 1;
+  const isInCoop = (gameState.coopMembers || []).includes(String(player.id));
+
+  // Get player's owned cells (with safety check)
+  const cells = gameState.cells || [];
+  const playerCells = cells.filter(cell => cell.owner === String(player.id));
+  const emptyCells = cells.filter(cell => cell.type === 'EMPTY' && cell.owner === null);
 
   return (
-    <div className={`player-panel ${isCurrentTurn ? 'current-turn' : ''} ${isMyPlayer ? 'my-player' : ''}`}>
+    <div className={`player-panel ${isCurrentTurn ? 'current-turn' : ''} ${isMyPlayer ? 'my-player' : ''} ${player.inPortugal ? 'in-portugal' : ''}`}>
       <div className="player-header">
         <h3>
           {isCurrentTurn && '▶ '}
-          {player.name}
-          {isMyPlayer && !isCurrentTurn && ' (你)'}
+          {player.name || `玩家 ${player.id + 1}`}
+          {isMyPlayer && ' (你)'}
           {isCurrentTurn && ' (当前回合)'}
+          {player.inPortugal > 0 && ' 🇵🇹 在葡萄牙'}
         </h3>
-        {isDayPhase && (
+        {isActionPhase && (
           <span className="action-points">
-            ⚡ {player.actionPoints} 行动点
+            ⚡ {remainingActions}/{player.workers} 剩余行动
           </span>
+        )}
+        {isInCoop && (
+          <span className="coop-badge">🤝 合作社成员</span>
         )}
       </div>
 
@@ -228,65 +233,198 @@ export function PlayerPanel({
           <span className="resource-value">{player.cocoa}</span>
           <span className="resource-label">可可</span>
         </div>
-        <div className="resource wood">
+        <div className="resource timber">
           <span className="resource-icon">🪵</span>
-          <span className="resource-value">{player.wood}</span>
+          <span className="resource-value">{player.timber}</span>
           <span className="resource-label">木材</span>
         </div>
-        <div className="resource population">
-          <span className="resource-icon">👨‍👩‍👧</span>
-          <span className="resource-value">{player.population}</span>
-          <span className="resource-label">人口</span>
+        <div className="resource workers">
+          <span className="resource-icon">👷</span>
+          <span className="resource-value">{player.workers}</span>
+          <span className="resource-label">工人</span>
         </div>
-        <div className="resource snails">
-          <span className="resource-icon">🐌</span>
-          <span className="resource-value">{player.snails}</span>
-          <span className="resource-label">蜗牛</span>
+        <div className="resource soil">
+          <span className="resource-icon">🌾</span>
+          <span className="resource-value">
+            {player.soilQuality === 'GOOD' ? '优质' : player.soilQuality === 'MEDIUM' ? '中等' : '劣质'}
+          </span>
+          <span className="resource-label">土壤</span>
         </div>
       </div>
 
-      <div className="maintenance-cost">
-        每回合维持: <span className="cost-value">{Math.floor(maintenanceCost)}</span> 🍫
+      <div className="living-cost">
+        生活成本: <span className="cost-value">{gameState.livingCost.timber} 木材 + {gameState.livingCost.cocoa} 可可/工人</span>
+        {gameState.taxPenalty > 0 && (
+          <span className="tax-penalty"> + {gameState.taxPenalty} 环境罚款</span>
+        )}
       </div>
 
-      <div className="player-lands">
-        <h4>🏝️ 土地 ({player.lands.length})</h4>
-        <div className="lands-grid">
-          {player.lands.map(land => (
-            <LandCard
-              key={land.id}
-              land={land}
+      {/* Debug info
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{ fontSize: '12px', color: '#666', padding: '10px', background: '#f0f0f0', margin: '10px 0' }}>
+          <div>Phase: {gameState.phase}</div>
+          <div>isActionPhase: {String(isActionPhase)}</div>
+          <div>canAct: {String(canAct)}</div>
+          <div>hasActionsLeft: {String(hasActionsLeft)}</div>
+          <div>isCurrentTurn: {String(isCurrentTurn)}</div>
+          <div>isMyPlayer: {String(isMyPlayer)}</div>
+          <div>actionsTaken: {player.actionsTaken || 0} / workers: {player.workers || 0}</div>
+        </div>
+      )} */}
+
+      {/* Action Phase Actions */}
+      {isActionPhase && (
+        <div className="action-phase-actions">
+          {!canAct && (
+            <div style={{ padding: '10px', background: '#fff3cd', margin: '10px 0' }}>
+              {!isCurrentTurn ? '等待你的回合...' : '无法执行行动'}
+            </div>
+          )}
+          {canAct && !hasActionsLeft && (
+            <div style={{ padding: '10px', background: '#f8d7da', margin: '10px 0' }}>
+              行动点已用完，请等待回合结束
+            </div>
+          )}
+          {canAct && hasActionsLeft && (
+            <>
+              <h4>可用行动</h4>
+              <div className="actions-grid">
+            {/* Farm Cocoa */}
+            <div className="action-group">
+              <h5>🌾 种可可</h5>
+              <div className="target-players">
+                {allPlayers.map(target => {
+                  const canFarmOwn = target.id === player.id;
+                  const canFarmNeighbor = Math.abs(target.id - player.id) === 1;
+                  const canFarmCoop = isInCoop && gameState.coopMembers.includes(String(target.id));
+                  const canFarm = canFarmOwn || canFarmNeighbor || canFarmCoop;
+                  
+                  if (!canFarm) return null;
+                  
+                  return (
+                    <button
+                      key={target.id}
+                      className="action-btn farm"
+                      onClick={() => moves.farmCocoa?.(String(target.id))}
+                    >
+                      在玩家 {target.id} 的土地上种可可
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Log Buffer */}
+            {gameState.bufferTrees > 0 && (
+              <button
+                className="action-btn log"
+                onClick={() => moves.logBuffer?.()}
+              >
+                🪓 缓冲区伐木 (+1木材)
+              </button>
+            )}
+
+            {/* Hunt Snail */}
+            {(gameState.coreSnails > 0 || gameState.bufferSnails > 0) && (
+              <div className="action-group">
+                <h5>🐌 捕猎蜗牛 (+2可可)</h5>
+                {gameState.coreSnails > 0 && (
+                  <button
+                    className="action-btn hunt"
+                    onClick={() => moves.huntSnail?.('CORE')}
+                  >
+                    核心区
+                  </button>
+                )}
+                {gameState.bufferSnails > 0 && (
+                  <button
+                    className="action-btn hunt"
+                    onClick={() => moves.huntSnail?.('BUFFER')}
+                  >
+                    缓冲区
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Join Coop */}
+            {gameState.round >= 2 && !isInCoop && !gameState.coopApplicants.includes(String(player.id)) && (
+              <button
+                className="action-btn coop"
+                onClick={() => moves.joinCoop?.()}
+              >
+                🤝 {gameState.round === 2 ? '加入合作社' : '申请加入合作社'}
+              </button>
+            )}
+
+            {/* Retrieve Worker */}
+            {player.inPortugal && (
+              <button
+                className="action-btn retrieve"
+                onClick={() => moves.retrieveWorker?.()}
+              >
+                👷 从葡萄牙赎回工人
+              </button>
+            )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Town Hall Phase Info */}
+      {gameState.phase === 'townHall' && (
+        <div className="town-hall-info" style={{ padding: '15px', background: '#e7f3ff', margin: '10px 0', borderRadius: '5px' }}>
+          <h4>🏛️ 市政厅讨论阶段</h4>
+          <p>正在处理生活成本支付和特殊事件...</p>
+          <p>请稍候，即将进入行动阶段</p>
+        </div>
+      )}
+
+      {/* Calculation Phase Info */}
+      {gameState.phase === 'calculation' && (
+        <div className="calculation-info" style={{ padding: '15px', background: '#fff3cd', margin: '10px 0', borderRadius: '5px' }}>
+          <h4>📊 结算阶段</h4>
+          <p>正在计算生态变化和资源更新...</p>
+        </div>
+      )}
+
+      {/* Player's Cells */}
+      <div className="player-cells">
+        <h4>🏝️ 拥有的地块 ({playerCells.length})</h4>
+        <div className="cells-grid">
+          {playerCells.map(cell => (
+            <LandCellDisplay
+              key={cell.id}
+              cell={cell}
               canAct={canAct}
-              isDayPhase={isDayPhase}
-              hasActionPoints={hasActionPoints}
-              hasWood={hasWood}
-              onPlant={() => moves.plantCocoa(land.id)}
-              onHarvest={() => moves.harvestCocoa(land.id)}
-              onCut={() => moves.cutTree(land.id)}
-              onImprove={() => moves.improveLand(land.id)}
+              isActionPhase={isActionPhase}
+              hasActionsLeft={hasActionsLeft}
+              onExtend={() => {}}
+              onAbandon={() => moves.abandonFarm?.(cell.id)}
+              hasResources={hasResources}
+              playerId={player.id}
+            />
+          ))}
+          {emptyCells.slice(0, 3).map(cell => (
+            <LandCellDisplay
+              key={cell.id}
+              cell={cell}
+              canAct={canAct}
+              isActionPhase={isActionPhase}
+              hasActionsLeft={hasActionsLeft}
+              onExtend={() => moves.extendFarm?.(cell.id)}
+              onAbandon={() => {}}
+              hasResources={hasResources}
+              playerId={player.id}
             />
           ))}
         </div>
       </div>
 
-      {/* Day Phase: End Turn Button */}
-      {isDayPhase && canAct && (
-        <div className="turn-actions">
-          <button 
-            className="end-turn-btn"
-            onClick={() => moves.endTurn()}
-          >
-            ⏭️ 结束回合
-          </button>
-          {!hasActionPoints && (
-            <p className="no-ap-hint">行动点已用完，请结束回合</p>
-          )}
-        </div>
-      )}
-
-      {/* Night Phase: Action Selection */}
-      {isNightPhase && isMyPlayer && (
-        <NightActionPanel
+      {/* Secret Phase: Action Selection */}
+      {isSecretPhase && isMyPlayer && (
+        <SecretActionPanel
           player={player}
           moves={moves}
           allPlayers={allPlayers}
@@ -294,9 +432,9 @@ export function PlayerPanel({
         />
       )}
 
-      {/* Night Phase: Waiting indicator for other players */}
-      {isNightPhase && !isMyPlayer && (
-        <div className="night-status-indicator">
+      {/* Secret Phase: Waiting indicator for other players */}
+      {isSecretPhase && !isMyPlayer && (
+        <div className="secret-status-indicator">
           {player.secretAction ? (
             <span className="status ready">✓ 已选择行动</span>
           ) : (

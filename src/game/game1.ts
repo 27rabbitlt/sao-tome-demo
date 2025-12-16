@@ -1,8 +1,7 @@
 // game.ts
 // boardgame.io Game 配置
-import type { Game, Ctx } from 'boardgame.io';
-import { TurnOrder } from 'boardgame.io/core';
-import type { GameState } from './core_data_structure';
+import { Game, Ctx } from 'boardgame.io';
+import { GameState, Player, SecretAction } from './core_data_structure';
 import {
   initializeGame,
   calculateSnailPopulation,
@@ -12,162 +11,149 @@ import {
   resolveSecretActions,
 } from './game_logic';
 
-import { isNeighbor } from './game_utils';
-
 // 定义 boardgame.io 的 G 类型（与 GameState 相同）
 export interface G extends GameState {}
 
+/**
+ * 辅助函数：判断两个玩家是否为邻居
+ * 地图上的玩家分布是线性的（P0 - P1 - P2 - P3 - P4）
+ * 由于岛屿是 C 字形，P0 和 P4 不是邻居
+ * @param id1 玩家ID字符串（例如："0", "1"）
+ * @param id2 玩家ID字符串（例如："0", "1"）
+ * @returns 如果两个玩家是邻居返回 true，否则返回 false
+ */
+function isNeighbor(id1: string, id2: string): boolean {
+  const n1 = parseInt(id1, 10);
+  const n2 = parseInt(id2, 10);
+  
+  // 仅当 Math.abs(n1 - n2) === 1 时返回 true
+  // 这样确保了 0 和 4 不互为邻居
+  return Math.abs(n1 - n2) === 1;
+}
 
 // 定义游戏配置
-export const SaoTomeGame: Game<G> = {
-  name: 'sao-tome-farmers',
+export const CocoaWorld: Game<G> = {
+  name: 'CocoaWorld',
 
   // 初始化游戏状态
-  setup: ({ ctx }): G => {
-    const gameState = initializeGame();
-    
-    // 确保玩家数量匹配 boardgame.io 的配置
-    // 如果 ctx.numPlayers 不是 5，需要调整玩家数组
-    if (gameState.players.length !== ctx.numPlayers) {
-      // 只取前 ctx.numPlayers 个玩家
-      gameState.players = gameState.players.slice(0, ctx.numPlayers);
-    }
-    
-    return gameState;
-  },
-
-  // 添加设置玩家名字的 move（可以在任何阶段使用）
-  moves: {
-    setPlayerName: ({ G, ctx }: { G: G; ctx: Ctx }, playerId: number, name: string) => {
-      const player = G.players.find(p => p.id === playerId);
-      if (player && name.trim()) {
-        player.name = name.trim();
-      }
-    },
-    setMyName: ({ G, ctx }: { G: G; ctx: Ctx }, name: string) => {
-      const playerId = parseInt(ctx.currentPlayer);
-      const player = G.players.find(p => p.id === playerId);
-      if (player && name.trim()) {
-        player.name = name.trim();
-      }
-    },
+  setup: (): G => {
+    return initializeGame();
   },
 
   // 阶段定义
   phases: {
     // 市政厅讨论阶段
-    // townHall: {
-    //   next: 'action', // 下一阶段是 action
-    //   endIf: () => true, // 立即结束，自动转换到下一阶段
-    //   onBegin: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
-    //     // Start of Round 逻辑
+    townHall: {
+      start: true, // 游戏开始时进入此阶段
+      next: 'action', // 下一阶段是 action
+      onBegin: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
+        // Start of Round 逻辑
         
-    //     // A. 推进回合数
-    //     // 如果是游戏第一轮初始化，Round 已经是 1，不需要再加
-    //     // 否则，在进入 TownHall 前，Round + 1
-    //     // 判断是否是第一次进入：检查是否是游戏刚开始（round === 1 且 logs 为空）
-    //     const isFirstRound = G.round === 1 && G.logs.length === 0;
+        // A. 推进回合数
+        // 如果是游戏第一轮初始化，Round 已经是 1，不需要再加
+        // 否则，在进入 TownHall 前，Round + 1
+        // 判断是否是第一次进入：检查是否是游戏刚开始（round === 1 且 logs 为空）
+        const isFirstRound = G.round === 1 && G.logs.length === 0;
         
-    //     if (!isFirstRound) {
-    //       // 不是第一次，说明是从 calculation 阶段过来的，需要增加 round
-    //       G.round += 1;
-    //       G.logs.push(`进入第 ${G.round} 轮`);
-    //     }
+        if (!isFirstRound) {
+          // 不是第一次，说明是从 calculation 阶段过来的，需要增加 round
+          G.round += 1;
+          G.logs.push(`进入第 ${G.round} 轮`);
+        }
         
-    //     // B. 触发特殊事件
-    //     if (G.round === 2) {
-    //       // Round 2: Population Boom - 所有玩家 workers 设置为 3
-    //       G.players.forEach((player) => {
-    //         player.workers = 3;
-    //       });
-    //       G.logs.push(`第 2 轮：人口增长！所有玩家工人数量增加到 3`);
-    //     } else if (G.round === 3) {
-    //       // Round 3: Climate Change - 反转土壤质量
-    //       G.players.forEach((player) => {
-    //         // 反转土壤质量
-    //         let newSoilQuality: 'GOOD' | 'MEDIUM' | 'BAD';
-    //         if (player.soilQuality === 'GOOD') {
-    //           newSoilQuality = 'BAD'; // 原 GOOD -> 变 BAD
-    //         } else if (player.soilQuality === 'MEDIUM') {
-    //           newSoilQuality = 'MEDIUM'; // 原 MEDIUM -> 保持不变
-    //         } else {
-    //           newSoilQuality = 'GOOD'; // 原 BAD -> 变 GOOD
-    //         }
+        // B. 触发特殊事件
+        if (G.round === 2) {
+          // Round 2: Population Boom - 所有玩家 workers 设置为 3
+          G.players.forEach((player) => {
+            player.workers = 3;
+          });
+          G.logs.push(`第 2 轮：人口增长！所有玩家工人数量增加到 3`);
+        } else if (G.round === 3) {
+          // Round 3: Climate Change - 反转土壤质量
+          G.players.forEach((player) => {
+            // 反转土壤质量
+            let newSoilQuality: 'GOOD' | 'MEDIUM' | 'BAD';
+            if (player.soilQuality === 'GOOD') {
+              newSoilQuality = 'BAD'; // 原 GOOD -> 变 BAD
+            } else if (player.soilQuality === 'MEDIUM') {
+              newSoilQuality = 'MEDIUM'; // 原 MEDIUM -> 保持不变
+            } else {
+              newSoilQuality = 'GOOD'; // 原 BAD -> 变 GOOD
+            }
             
-    //         player.soilQuality = newSoilQuality;
+            player.soilQuality = newSoilQuality;
             
-    //         // 同步更新玩家名下所有 FARM 格子的 soilQuality
-    //         G.cells.forEach((cell) => {
-    //           if (cell.type === 'FARM' && cell.owner === String(player.id)) {
-    //             cell.soilQuality = newSoilQuality;
-    //           }
-    //         });
-    //       });
-    //       G.logs.push(`第 3 轮：气候变化！土壤质量发生反转`);
-    //     }
+            // 同步更新玩家名下所有 FARM 格子的 soilQuality
+            G.cells.forEach((cell) => {
+              if (cell.type === 'FARM' && cell.owner === String(player.id)) {
+                cell.soilQuality = newSoilQuality;
+              }
+            });
+          });
+          G.logs.push(`第 3 轮：气候变化！土壤质量发生反转`);
+        }
         
-    //     // C. 支付生活成本与葡萄牙机制
-    //     G.players.forEach((player) => {
-    //       // 1. 计算应付成本
-    //       const costTimber = 1; // 固定为 1，每户只消耗1木材，与工人数无关
-    //       const costCocoa = (1 * player.workers) + G.taxPenalty; // 基础人头费 + 环境罚款
+        // C. 支付生活成本与葡萄牙机制
+        G.players.forEach((player) => {
+          // 1. 计算应付成本
+          const costTimber = 1; // 固定为 1，每户只消耗1木材，与工人数无关
+          const costCocoa = (1 * player.workers) + G.taxPenalty; // 基础人头费 + 环境罚款
           
-    //       // 2. 支付判定
-    //       if (player.timber >= costTimber && player.cocoa >= costCocoa) {
-    //         // 能够支付：扣除相应资源
-    //         player.timber -= costTimber;
-    //         player.cocoa -= costCocoa;
-    //         // 确保标记清除
-    //         player.inPortugal = 0;
-    //         G.logs.push(`玩家 ${player.id} 支付生活成本：${costTimber} 木材 + ${costCocoa} 可可`);
-    //       } else {
-    //         // 无法支付：破产
-    //         // 破产扣除：将玩家现有的 timber 和 cocoa 全部清零
-    //         const lostTimber = player.timber;
-    //         const lostCocoa = player.cocoa;
-    //         player.timber = 0;
-    //         player.cocoa = 0;
+          // 2. 支付判定
+          if (player.timber >= costTimber && player.cocoa >= costCocoa) {
+            // 能够支付：扣除相应资源
+            player.timber -= costTimber;
+            player.cocoa -= costCocoa;
+            // 确保标记清除
+            player.inPortugal = false;
+            G.logs.push(`玩家 ${player.id} 支付生活成本：${costTimber} 木材 + ${costCocoa} 可可`);
+          } else {
+            // 无法支付：破产
+            // 破产扣除：将玩家现有的 timber 和 cocoa 全部清零
+            const lostTimber = player.timber;
+            const lostCocoa = player.cocoa;
+            player.timber = 0;
+            player.cocoa = 0;
             
-    //         // 送去葡萄牙
-    //         player.workers = Math.max(1, player.workers - 1); // 减少劳动力，但至少保留1个
-    //         player.inPortugal = 1;
+            // 送去葡萄牙
+            player.workers = Math.max(1, player.workers - 1); // 减少劳动力，但至少保留1个
+            player.inPortugal = true;
             
-    //         // 首次救济金：如果 !player.hasBeenToPortugal（第一次发生）
-    //         if (player.joinCoopRound === 0) {
-    //           player.cocoa += 1;
-    //           player.joinCoopRound = 1;
-    //           G.logs.push(`玩家 ${player.id} 破产！失去 ${lostTimber} 木材 + ${lostCocoa} 可可，工人减少到 ${player.workers}，首次前往葡萄牙获得 1 可可救济金`);
-    //         } else {
-    //           G.logs.push(`玩家 ${player.id} 破产！失去 ${lostTimber} 木材 + ${lostCocoa} 可可，工人减少到 ${player.workers}，再次前往葡萄牙`);
-    //         }
-    //       }
-    //     });
+            // 首次救济金：如果 !player.hasBeenToPortugal（第一次发生）
+            if (!player.hasBeenToPortugal) {
+              player.cocoa += 1;
+              player.hasBeenToPortugal = true;
+              G.logs.push(`玩家 ${player.id} 破产！失去 ${lostTimber} 木材 + ${lostCocoa} 可可，工人减少到 ${player.workers}，首次前往葡萄牙获得 1 可可救济金`);
+            } else {
+              G.logs.push(`玩家 ${player.id} 破产！失去 ${lostTimber} 木材 + ${lostCocoa} 可可，工人减少到 ${player.workers}，再次前往葡萄牙`);
+            }
+          }
+        });
         
-    //     // D. 检查游戏结束条件（在支付生活成本之后）
-    //     // 规则书指出游戏在 Round 6 支付完生活费后结束
-    //     if (G.round === 6 && events) {
-    //       // 计算最终状态信息
-    //       const survivors = G.players.filter((p) => !p.inPortugal || p.workers > 0).length;
-    //       const finalTotalSnails = G.coreSnails + G.bufferSnails;
-    //       const finalTotalTrees = G.coreTrees + G.bufferTrees;
+        // D. 检查游戏结束条件（在支付生活成本之后）
+        // 规则书指出游戏在 Round 6 支付完生活费后结束
+        if (G.round === 6 && events) {
+          // 计算最终状态信息
+          const survivors = G.players.filter((p) => !p.inPortugal || p.workers > 0).length;
+          const finalTotalSnails = G.coreSnails + G.bufferSnails;
+          const finalTotalTrees = G.coreTrees + G.bufferTrees;
           
-    //       G.logs.push(`游戏结束！第 6 轮支付完成。存活玩家：${survivors}，最终生态：${finalTotalTrees} 棵树，${finalTotalSnails} 只蜗牛`);
+          G.logs.push(`游戏结束！第 6 轮支付完成。存活玩家：${survivors}，最终生态：${finalTotalTrees} 棵树，${finalTotalSnails} 只蜗牛`);
           
-    //       // 触发游戏结束
-    //       events.endGame({
-    //         round: G.round,
-    //         survivors: survivors,
-    //         finalTotalTrees: finalTotalTrees,
-    //         finalTotalSnails: finalTotalSnails,
-    //         playersInPortugal: G.players.filter((p) => p.inPortugal).length,
-    //       });
-    //     }
-    //   },
-    // },
+          // 触发游戏结束
+          events.endGame({
+            round: G.round,
+            survivors: survivors,
+            finalTotalTrees: finalTotalTrees,
+            finalTotalSnails: finalTotalSnails,
+            playersInPortugal: G.players.filter((p) => p.inPortugal).length,
+          });
+        }
+      },
+    },
 
     // 玩家行动阶段
     action: {
-      start: true,
       onBegin: ({ G }: { G: G; ctx: Ctx }) => {
         // 重置阶段回合计数器
         G.turnsInPhase = 0;
@@ -477,12 +463,12 @@ export const SaoTomeGame: Game<G> = {
           }
 
           // 验证逻辑：当前玩家必须处于"有工人在葡萄牙"的状态
-          if (player.inPortugal === 0) {
+          if (!player.inPortugal) {
             return; // 无效移动：不能赎回不存在的工人
           }
 
           // 执行逻辑：召回工人
-          player.inPortugal = 0;
+          player.inPortugal = false;
           player.workers += 1; // 恢复劳动力
           player.actionsTaken += 1; // 消耗行动点（接人这个动作本身消耗 1 个行动点）
 
@@ -499,15 +485,8 @@ export const SaoTomeGame: Game<G> = {
 
     // 秘密行动阶段
     secret: {
-      onBegin: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
-        G.phase = 'secret';
-        G.logs.push(`进入秘密行动阶段`);
-        // 重置阶段回合计数器
-        G.turnsInPhase = 0;
-      },
       turn: {
-        // activePlayers: { all: 'secretStage' }, // 所有玩家同时行动
-        order: TurnOrder.ONCE,
+        activePlayers: { all: 'secretStage' }, // 所有玩家同时行动
       },
       next: 'calculation', // 下一阶段是 calculation
       moves: {
@@ -651,3 +630,4 @@ export const SaoTomeGame: Game<G> = {
   // 注意：boardgame.io 的 PlayerView 需要通过其他方式配置
   // 这里先留空，可以在客户端配置中处理
 };
+

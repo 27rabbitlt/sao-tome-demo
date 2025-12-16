@@ -1,7 +1,7 @@
 // São Tomé Island Farmers - Main Board Component
+import { useEffect } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
-import type { GameState, NightAction } from './types';
-import { CONSTANTS } from './types';
+import type { GameState } from './core_data_structure';
 import { PlayerPanel } from './PlayerPanel';
 import './game.css';
 
@@ -10,53 +10,62 @@ interface SaoTomeBoardProps extends BoardProps<GameState> {
   playerNames?: string[];
 }
 
-function EcosystemMeter({ pressure }: { pressure: number }) {
-  const percentage = Math.min(100, pressure);
-  const status = pressure >= CONSTANTS.ECOSYSTEM_CRITICAL 
-    ? 'critical' 
-    : pressure >= CONSTANTS.ECOSYSTEM_THRESHOLD 
-      ? 'warning' 
-      : 'healthy';
+function EcosystemDisplay({ G }: { G: GameState }) {
+  const totalTrees = G.coreTrees + G.bufferTrees;
+  const totalSnails = G.coreSnails + G.bufferSnails;
+  const maxTrees = 20 + 12; // Core max + Buffer max
 
   return (
-    <div className={`ecosystem-meter ${status}`}>
-      <div className="meter-label">
-        🌍 生态系统压力
-      </div>
-      <div className="meter-bar">
-        <div 
-          className="meter-fill" 
-          style={{ width: `${percentage}%` }}
-        />
-        <div className="meter-markers">
-          <div className="marker threshold" style={{ left: `${CONSTANTS.ECOSYSTEM_THRESHOLD}%` }} />
-          <div className="marker critical" style={{ left: `${CONSTANTS.ECOSYSTEM_CRITICAL}%` }} />
+    <div className="ecosystem-display">
+      <div className="ecosystem-label">🌍 生态系统状态</div>
+      <div className="ecosystem-stats">
+        <div className="stat-item">
+          <span className="stat-label">🌲 核心区树木</span>
+          <span className="stat-value">{G.coreTrees}/20</span>
         </div>
-      </div>
-      <div className="meter-value">{pressure}/100</div>
-      <div className="meter-status">
-        {status === 'critical' && '🔥 危险！生态崩溃！'}
-        {status === 'warning' && '⚠️ 警告：维持成本增加'}
-        {status === 'healthy' && '🌿 生态系统健康'}
+        <div className="stat-item">
+          <span className="stat-label">🌳 缓冲区树木</span>
+          <span className="stat-value">{G.bufferTrees}/12</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">🐌 核心区蜗牛</span>
+          <span className="stat-value">{G.coreSnails}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">🐌 缓冲区蜗牛</span>
+          <span className="stat-value">{G.bufferSnails}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">💰 生活成本</span>
+          <span className="stat-value">{G.livingCost.timber} 木材 + {G.livingCost.cocoa} 可可/工人</span>
+        </div>
+        {G.taxPenalty > 0 && (
+          <div className="stat-item warning">
+            <span className="stat-label">⚠️ 环境罚款</span>
+            <span className="stat-value">+{G.taxPenalty} 可可</span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function GameEventLog({ events }: { events: GameState['events'] }) {
-  const recentEvents = events.slice(-10).reverse();
+function GameLog({ logs }: { logs: string[] }) {
+  const recentLogs = logs.slice(-15).reverse();
 
   return (
-    <div className="event-log">
-      <h3>📜 事件日志</h3>
-      <div className="events-list">
-        {recentEvents.map((event, i) => (
-          <div key={i} className={`event-item ${event.type}`}>
-            <span className="event-round">R{event.round}</span>
-            <span className="event-phase">{event.phase === 'day' ? '☀️' : '🌙'}</span>
-            <span className="event-message">{event.message}</span>
-          </div>
-        ))}
+    <div className="game-log">
+      <h3>📜 游戏日志</h3>
+      <div className="logs-list">
+        {recentLogs.length === 0 ? (
+          <div className="log-item">游戏刚刚开始...</div>
+        ) : (
+          recentLogs.map((log, i) => (
+            <div key={i} className="log-item">
+              {log}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -64,18 +73,25 @@ function GameEventLog({ events }: { events: GameState['events'] }) {
 
 function CurrentTurnIndicator({
   currentPlayerId,
-  currentPlayerName,
+  currentPlayer,
   phase,
   isYourTurn,
-  playerNames,
 }: {
   currentPlayerId: string;
-  currentPlayerName: string;
+  currentPlayer: GameState['players'][0] | undefined;
   phase: GameState['phase'];
   isYourTurn: boolean;
-  playerNames?: string[];
 }) {
-  const displayName = playerNames?.[parseInt(currentPlayerId)] || currentPlayerName;
+  const displayName = currentPlayer?.name || `玩家 ${parseInt(currentPlayerId)}`;
+
+  const phaseLabels: Record<GameState['phase'], string> = {
+    'SETUP': '⚙️ 设置阶段',
+    'townHall': '🏛️ 市政厅讨论',
+    'action': '☀️ 行动阶段',
+    'secret': '🌙 秘密行动阶段',
+    'calculation': '📊 结算阶段',
+    'gameOver': '🏆 游戏结束',
+  };
 
   return (
     <div className={`current-turn-indicator ${isYourTurn ? 'your-turn' : ''}`}>
@@ -88,10 +104,7 @@ function CurrentTurnIndicator({
         </span>
       </div>
       <div className="turn-phase">
-        {phase === 'day' && '☀️ 白天 - 执行行动'}
-        {phase === 'night' && '🌙 夜晚 - 选择秘密行动'}
-        {phase === 'nightReveal' && '🔮 揭示夜间行动'}
-        {phase === 'gameEnd' && '🏆 游戏结束'}
+        {phaseLabels[phase] || phase}
       </div>
     </div>
   );
@@ -104,120 +117,49 @@ function PhaseIndicator({
   phase: GameState['phase'];
   round: number;
 }) {
+  const phaseLabels: Record<GameState['phase'], { name: string; desc: string }> = {
+    'SETUP': { name: '⚙️ 设置阶段', desc: '游戏初始化中...' },
+    'townHall': { name: '🏛️ 市政厅讨论', desc: '支付生活成本，讨论策略' },
+    'action': { name: '☀️ 行动阶段', desc: '玩家轮流执行行动' },
+    'secret': { name: '🌙 秘密行动阶段', desc: '所有玩家同时选择秘密行动' },
+    'calculation': { name: '📊 结算阶段', desc: '计算生态变化和资源更新' },
+    'gameOver': { name: '🏆 游戏结束', desc: '感谢游玩！' },
+  };
+
+  const phaseInfo = phaseLabels[phase] || { name: phase, desc: '' };
+
   return (
     <div className={`phase-indicator phase-${phase}`}>
       <div className="phase-info">
-        <span className="round-number">第 {round} 回合</span>
-        <span className="phase-name">
-          {phase === 'day' && '☀️ 白天阶段'}
-          {phase === 'night' && '🌙 夜晚阶段'}
-          {phase === 'nightReveal' && '🔮 揭示阶段'}
-          {phase === 'gameEnd' && '🏆 游戏结束'}
-        </span>
+        <span className="round-number">第 {round} 轮</span>
+        <span className="phase-name">{phaseInfo.name}</span>
       </div>
-      <div className="phase-description">
-        {phase === 'day' && '玩家轮流执行行动，用完行动点或点击结束回合后轮到下一位'}
-        {phase === 'night' && '玩家轮流选择秘密行动，选择后自动轮到下一位'}
-        {phase === 'nightReveal' && '所有夜间行动已揭示！'}
-        {phase === 'gameEnd' && '感谢游玩！'}
-      </div>
-    </div>
-  );
-}
-
-function WinConditionTracker({ 
-  players, 
-  target,
-  playerNames,
-  currentTurnPlayerId,
-}: { 
-  players: GameState['players']; 
-  target: number;
-  playerNames?: string[];
-  currentTurnPlayerId?: string;
-}) {
-  const sortedPlayers = Object.values(players).sort((a, b) => b.cocoa - a.cocoa);
-
-  return (
-    <div className="win-tracker">
-      <h3>🏆 胜利进度 (目标: {target} 可可)</h3>
-      <div className="progress-list">
-        {sortedPlayers.map((player) => {
-          const progress = Math.min(100, (player.cocoa / target) * 100);
-          const displayName = playerNames?.[parseInt(player.id)] || player.name;
-          const isCurrentTurn = player.id === currentTurnPlayerId;
-          return (
-            <div key={player.id} className={`player-progress ${isCurrentTurn ? 'current-turn' : ''}`}>
-              <span className="progress-name">
-                {isCurrentTurn && '▶ '}
-                {displayName}
-              </span>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="progress-value">{player.cocoa}/{target}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function GameOverScreen({ 
-  winner, 
-  players,
-  playerNames,
-}: { 
-  winner: string; 
-  players: GameState['players'];
-  playerNames?: string[];
-}) {
-  const winnerPlayer = players[winner];
-  const sortedPlayers = Object.values(players).sort((a, b) => b.cocoa - a.cocoa);
-  const winnerName = playerNames?.[parseInt(winner)] || winnerPlayer?.name;
-
-  return (
-    <div className="game-over-overlay">
-      <div className="game-over-content">
-        <h1>🎉 游戏结束！</h1>
-        <div className="winner-announcement">
-          <span className="winner-emoji">👑</span>
-          <h2>{winnerName} 获胜！</h2>
-          <p>最终可可数量: {winnerPlayer?.cocoa}</p>
-        </div>
-        <div className="final-standings">
-          <h3>最终排名</h3>
-          {sortedPlayers.map((player, index) => {
-            const displayName = playerNames?.[parseInt(player.id)] || player.name;
-            return (
-              <div key={player.id} className={`standing-row ${index === 0 ? 'winner' : ''}`}>
-                <span className="standing-rank">
-                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
-                </span>
-                <span className="standing-name">{displayName}</span>
-                <span className="standing-cocoa">{player.cocoa} 🍫</span>
-              </div>
-            );
-          })}
-        </div>
-        <button 
-          className="restart-btn"
-          onClick={() => window.location.reload()}
-        >
-          🔄 重新开始
-        </button>
-      </div>
+      <div className="phase-description">{phaseInfo.desc}</div>
     </div>
   );
 }
 
 export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames }: SaoTomeBoardProps) {
+  // Safety check: Ensure G exists
+  if (!G) {
+    return (
+      <div className="sao-tome-board">
+        <div style={{ padding: '20px', textAlign: 'center' }}>游戏状态加载中...</div>
+      </div>
+    );
+  }
+  
+  // Safety check: Ensure players array exists
+  if (!G.players || G.players.length === 0) {
+    return (
+      <div className="sao-tome-board">
+        <div style={{ padding: '20px', textAlign: 'center' }}>等待玩家数据...</div>
+      </div>
+    );
+  }
+  
   // Get current turn's player ID from ctx
-  const currentTurnPlayerId = ctx.currentPlayer;
+  const currentTurnPlayerId = ctx.currentPlayer || '0';
   
   // For hotseat mode, we control all players
   // For online mode, playerID is fixed
@@ -226,24 +168,46 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
   // Check if it's my turn
   const isMyTurn = myPlayerId === currentTurnPlayerId;
   
-  const currentTurnPlayer = G.players[currentTurnPlayerId];
-  const allPlayers = Object.values(G.players);
+  // Find current player from array
+  const currentTurnPlayer = G.players.find(p => p.id === parseInt(currentTurnPlayerId));
+  const myPlayer = G.players.find(p => p.id === parseInt(myPlayerId));
 
-  // Update player names in G if provided
-  const getPlayerWithCustomName = (player: typeof currentTurnPlayer, index: number) => {
-    if (playerNames && playerNames[index]) {
-      return { ...player, name: playerNames[index] };
+  // Set player names on game start if provided (only once)
+  useEffect(() => {
+    if (playerNames && moves.setPlayerName && G.round === 1) {
+      G.players.forEach((player, index) => {
+        if (playerNames[index] && playerNames[index] !== player.name) {
+          // Set name directly in state (for hotseat) or via move (for online)
+          if (hotseatMode) {
+            player.name = playerNames[index];
+          } else if (player.id === parseInt(myPlayerId || '0')) {
+            // For online mode, only set own name via move
+            moves.setMyName?.(playerNames[index]);
+          }
+        }
+      });
     }
+  }, [playerNames, G.round, hotseatMode, myPlayerId, moves.setPlayerName, moves.setMyName]);
+
+  // Use names from game state
+  const getPlayerWithCustomName = (player: GameState['players'][0]) => {
     return player;
   };
 
   const boardMoves = {
-    plantCocoa: (landId: string) => moves.plantCocoa(landId),
-    harvestCocoa: (landId: string) => moves.harvestCocoa(landId),
-    cutTree: (landId: string) => moves.cutTree(landId),
-    improveLand: (landId: string) => moves.improveLand(landId),
-    endTurn: () => moves.endTurn(),
-    setNightAction: (action: NightAction) => moves.setNightAction(action),
+    farmCocoa: (targetPlayerId: string) => moves.farmCocoa?.(targetPlayerId),
+    transferResource: (targetPlayerId: string, resource: 'COCOA' | 'TIMBER', amount: number) => 
+      moves.transferResource?.(targetPlayerId, resource, amount),
+    logBuffer: () => moves.logBuffer?.(),
+    extendFarm: (targetCellId: string) => moves.extendFarm?.(targetCellId),
+    abandonFarm: (targetCellId: string) => moves.abandonFarm?.(targetCellId),
+    huntSnail: (zone: 'CORE' | 'BUFFER') => moves.huntSnail?.(zone),
+    joinCoop: () => moves.joinCoop?.(),
+    retrieveWorker: () => moves.retrieveWorker?.(),
+    doNothing: () => moves.doNothing?.(),
+    steal: (targetPlayerId: number, amount: number) => moves.steal?.(targetPlayerId, amount),
+    illegalLog: (zone: 'CORE' | 'BUFFER', amount: number) => moves.illegalLog?.(zone, amount),
+    setMyName: (name: string) => moves.setMyName?.(name),
   };
 
   return (
@@ -256,66 +220,64 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
       {/* Current Turn Indicator */}
       <CurrentTurnIndicator
         currentPlayerId={currentTurnPlayerId}
-        currentPlayerName={currentTurnPlayer?.name || ''}
+        currentPlayer={currentTurnPlayer}
         phase={G.phase}
         isYourTurn={isMyTurn}
-        playerNames={playerNames}
       />
 
       <div className="game-status-bar">
         <PhaseIndicator
           phase={G.phase}
-          round={G.currentRound}
+          round={G.round}
         />
-        <EcosystemMeter pressure={G.ecosystemPressure} />
+        <EcosystemDisplay G={G} />
       </div>
 
       <div className="game-main">
         <div className="players-area">
-          {allPlayers.map((player, index) => (
-            <PlayerPanel
-              key={player.id}
-              player={getPlayerWithCustomName(player, index)}
-              isCurrentTurn={player.id === currentTurnPlayerId}
-              isMyPlayer={hotseatMode ? player.id === currentTurnPlayerId : player.id === myPlayerId}
-              canAct={isMyTurn && player.id === currentTurnPlayerId}
-              gameState={G}
-              moves={boardMoves}
-              allPlayers={allPlayers.map((p, i) => getPlayerWithCustomName(p, i))}
-            />
-          ))}
+          {G.players && G.players.length > 0 ? (
+            G.players.map((player) => {
+              const playerIdNum = player.id;
+              const isCurrentPlayer = playerIdNum === parseInt(currentTurnPlayerId);
+              // In hotseat mode, canAct if it's the current player's turn
+              // In online mode, canAct if it's my player and my turn
+              const canPlayerAct = hotseatMode 
+                ? isCurrentPlayer && isMyTurn
+                : playerIdNum === parseInt(myPlayerId) && isMyTurn;
+              
+              return (
+                <PlayerPanel
+                  key={player.id}
+                  player={getPlayerWithCustomName(player)}
+                  isCurrentTurn={isCurrentPlayer}
+                  isMyPlayer={hotseatMode ? isCurrentPlayer : playerIdNum === parseInt(myPlayerId)}
+                  canAct={canPlayerAct}
+                  gameState={G}
+                  moves={boardMoves}
+                  allPlayers={G.players.map(p => getPlayerWithCustomName(p))}
+                />
+              );
+            })
+          ) : (
+            <div>没有玩家数据</div>
+          )}
         </div>
 
         <aside className="game-sidebar">
-          <WinConditionTracker 
-            players={G.players} 
-            target={CONSTANTS.WIN_COCOA_TARGET}
-            playerNames={playerNames}
-            currentTurnPlayerId={currentTurnPlayerId}
-          />
-          <GameEventLog events={G.events} />
+          <GameLog logs={G.logs} />
           
           <div className="game-rules-hint">
-            <h4>💡 提示</h4>
+            <h4>💡 游戏规则</h4>
             <ul>
-              <li>种植可可需要 2 回合成长</li>
-              <li>土地质量影响收获数量</li>
-              <li>砍树获得木材但增加生态压力</li>
-              <li>夜晚行动有风险但收益高</li>
-              <li>生态压力 &gt;50 会增加维持成本</li>
-              <li>首先达到 {CONSTANTS.WIN_COCOA_TARGET} 可可获胜！</li>
+              <li>每轮开始支付生活成本（木材 + 可可）</li>
+              <li>行动阶段：根据工人数量执行行动</li>
+              <li>秘密行动阶段：所有玩家同时选择</li>
+              <li>结算阶段：计算生态变化和资源更新</li>
+              <li>第6轮结束后游戏结束</li>
             </ul>
           </div>
         </aside>
       </div>
-
-      {G.phase === 'gameEnd' && G.winner && (
-        <GameOverScreen 
-          winner={G.winner} 
-          players={G.players}
-          playerNames={playerNames}
-        />
-      )}
     </div>
   );
 }

@@ -19,18 +19,23 @@ function createHotseatClient(numPlayers: number, playerNames: string[]) {
     ),
     numPlayers,
     multiplayer: Local(),
-    debug: false,
+    debug: true,
   });
 }
 
 // Create online client
-function createOnlineClient(numPlayers: number, serverUrl: string) {
+function createOnlineClient(numPlayers: number, serverUrl: string, playerNames: string[]) {
   return Client({
     game: SaoTomeGame,
-    board: SaoTomeBoard,
+    board: (props) => (
+      <SaoTomeBoard 
+        {...props} 
+        playerNames={playerNames}
+      />
+    ),
     numPlayers,
     multiplayer: SocketIO({ server: serverUrl }),
-    debug: false,
+    debug: true,
   });
 }
 
@@ -49,8 +54,8 @@ function HotseatGame({ config }: { config: GameConfig }) {
 // Online Game Component
 function OnlineGame({ config }: { config: GameConfig }) {
   const OnlineClient = useMemo(
-    () => createOnlineClient(config.numPlayers, config.serverUrl || 'http://localhost:8000'),
-    [config.numPlayers, config.serverUrl]
+    () => createOnlineClient(config.numPlayers, config.serverUrl || 'http://localhost:8000', config.playerNames),
+    [config.numPlayers, config.serverUrl, config.playerNames]
   );
 
   // Connect with matchID, playerID, and credentials

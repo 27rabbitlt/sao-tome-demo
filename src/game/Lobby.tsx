@@ -34,6 +34,7 @@ export function Lobby({ onStartGame }: LobbyProps) {
   const [pendingMatchID, setPendingMatchID] = useState<string | null>(null);
   const [pendingNumPlayers, setPendingNumPlayers] = useState(2);
   const [joiningSlot, setJoiningSlot] = useState<number | null>(null);
+  const [playerName, setPlayerName] = useState('');
 
   const handleNameChange = (index: number, name: string) => {
     const newNames = [...playerNames];
@@ -94,11 +95,14 @@ export function Lobby({ onStartGame }: LobbyProps) {
 
   const handleJoinSlot = async (slotIndex: number) => {
     if (!pendingMatchID) return;
+    if (!playerName.trim()) {
+      setError('请输入你的名字');
+      return;
+    }
     
     setJoiningSlot(slotIndex);
     setError(null);
     try {
-      // Join the match at the specified slot
       const response = await fetch(
         `${serverUrl}/games/sao-tome-farmers/${pendingMatchID}/join`,
         {
@@ -106,7 +110,7 @@ export function Lobby({ onStartGame }: LobbyProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             playerID: String(slotIndex),
-            playerName: playerNames[slotIndex] || `玩家${slotIndex + 1}`,
+            playerName: playerName.trim(),
           }),
         }
       );
@@ -121,11 +125,15 @@ export function Lobby({ onStartGame }: LobbyProps) {
       
       const data = await response.json();
       
-      // Successfully joined, start the game
+      // Create playerNames array with this player's name
+      const names = Array(pendingNumPlayers).fill('').map((_, i) => 
+        i === slotIndex ? playerName.trim() : `玩家 ${i + 1}`
+      );
+      
       onStartGame({
         mode: mode === 'online-host' ? 'online-host' : 'online-join',
         numPlayers: pendingNumPlayers,
-        playerNames: playerNames.slice(0, pendingNumPlayers),
+        playerNames: names,
         serverUrl,
         matchID: pendingMatchID,
         playerID: String(slotIndex),
@@ -168,7 +176,7 @@ export function Lobby({ onStartGame }: LobbyProps) {
           </header>
 
           <div className="lobby-card">
-            <h2>🎮 选择你的位置</h2>
+            <h2>🎮 加入游戏</h2>
             
             <div className="match-info-box">
               <span className="match-label">房间 ID:</span>
@@ -184,9 +192,17 @@ export function Lobby({ onStartGame }: LobbyProps) {
               </button>
             </div>
 
-            <p className="slot-hint">
-              选择一个位置加入游戏，将房间 ID 分享给其他玩家
-            </p>
+            <div className="setting-group">
+              <label>你的名字</label>
+              <input
+                type="text"
+                className="server-input"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="输入你的名字"
+                maxLength={20}
+              />
+            </div>
 
             {error && (
               <div className="error-message">{error}</div>
@@ -198,7 +214,7 @@ export function Lobby({ onStartGame }: LobbyProps) {
                   key={i}
                   className={`slot-btn-large ${joiningSlot === i ? 'joining' : ''}`}
                   onClick={() => handleJoinSlot(i)}
-                  disabled={joiningSlot !== null}
+                  disabled={joiningSlot !== null || !playerName.trim()}
                 >
                   <span className="slot-icon">👤</span>
                   <span className="slot-name">玩家 {i + 1}</span>
