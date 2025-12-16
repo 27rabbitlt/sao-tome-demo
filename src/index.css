@@ -1,0 +1,111 @@
+/* Global Reset and Base Styles */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Quicksand', sans-serif;
+}
+
+body {
+  display: block;
+  place-items: unset;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+/* Online Player Select Screen */
+.online-player-select {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: 
+    radial-gradient(ellipse at top, rgba(255, 215, 0, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, #1a5f7a 0%, #1e5631 50%, #5d4037 100%);
+}
+
+.select-content {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.select-content h2 {
+  color: #ffd700;
+  margin: 0 0 16px;
+  font-size: 1.6rem;
+}
+
+.match-info {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 24px;
+}
+
+.match-info code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: monospace;
+  color: #ffd700;
+  font-size: 1.1rem;
+}
+
+.player-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.slot-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-family: 'Quicksand', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.slot-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.4) 0%, rgba(196, 77, 42, 0.3) 100%);
+  border-color: #ff6b35;
+  transform: translateY(-2px);
+}
+
+.slot-icon {
+  font-size: 2rem;
+}
+
+.slot-name {
+  font-weight: 600;
+}
+
+.select-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin: 0;
+}
