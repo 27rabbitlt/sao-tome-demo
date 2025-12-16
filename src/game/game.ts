@@ -55,6 +55,20 @@ export const SaoTomeGame: Game<G> = {
 
   // 阶段定义
   phases: {
+    // registration: {
+    //   start: true,
+    //   next: 'action',
+    //   activePlayers: { ActivePlayers.ALL },
+    //   endIf: ({ G, ctx }: { G: G; ctx: Ctx }) => {
+    //     return G.players.every((p) => p.isReady);
+    //   },
+    //   moves: {
+    //     setName: ({G, ctx, playerId}: {G: G; ctx: Ctx; playerId: number}, name: string) => {
+    //       G.players[playerId].name = name;
+    //       G.players[playerId].isReady = true;
+    //     }
+    //   }
+    // },
     // 市政厅讨论阶段
     // townHall: {
     //   next: 'action', // 下一阶段是 action
@@ -170,7 +184,14 @@ export const SaoTomeGame: Game<G> = {
       start: true,
       onBegin: ({ G }: { G: G; ctx: Ctx }) => {
         // 重置阶段回合计数器
+        G.phase = 'action';
         G.turnsInPhase = 0;
+        // 重置所有地块的本回合种植标记（新回合开始时）
+        G.cells.forEach(cell => {
+          cell.farmedThisRound = false;
+        });
+        // 轮数增加
+        G.round += 1;
       },
       turn: {
         order: {
@@ -197,45 +218,50 @@ export const SaoTomeGame: Game<G> = {
       },
       next: 'secret', // 下一阶段是 secret
       moves: {
-        // 种可可：根据目标玩家的土壤质量增加 Cocoa
-        farmCocoa: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }, targetPlayerId: string) => {
+        // 种可可：在指定地块上种植可可，立即收获
+        farmCocoa: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }, cellId: string) => {
           const currentPlayerId = ctx.currentPlayer;
           const player = G.players.find((p) => p.id === parseInt(currentPlayerId));
           if (!player) {
             return;
           }
 
+          // 查找目标地块
+          const cell = G.cells.find((c) => c.id === cellId);
+          if (!cell) {
+            return;
+          }
+
+          // 检查本回合是否已在该地块种植
+          if (cell.farmedThisRound) {
+            return; // 本回合已在该地块种植
+          }
+
           // 前置检查：玩家只能在以下三种情况下耕种
-          const canFarmOwn = targetPlayerId === currentPlayerId; // 耕种自己的地
-          const canFarmNeighbor = isNeighbor(currentPlayerId, targetPlayerId); // 耕种邻居的地
+          const canFarmOwn = cell.owner === currentPlayerId; // 耕种自己的地
+          const canFarmNeighbor = cell.owner && isNeighbor(currentPlayerId, cell.owner); // 耕种邻居的地
           const isCoopMember = G.coopMembers.includes(currentPlayerId); // 发起者在合作社
-          const targetIsCoopMember = G.coopMembers.includes(targetPlayerId); // 目标在合作社
+          const targetIsCoopMember = cell.owner ? G.coopMembers.includes(cell.owner) : false; // 目标在合作社
           const canFarmCoop = isCoopMember && targetIsCoopMember; // 合作社特权（远程耕作）
 
           // 如果不满足上述任一条件，返回无效移动
           if (!canFarmOwn && !canFarmNeighbor && !canFarmCoop) {
-            // boardgame.io 中，返回 undefined 表示无效移动
             return;
           }
 
-          // 查找目标玩家
-          const targetPlayer = G.players.find((p) => p.id === parseInt(targetPlayerId));
-          if (!targetPlayer) {
-            return;
-          }
-
-          // 执行逻辑：根据目标玩家的 soilQuality 计算产出
-          const yieldAmount = getCocoaYield(targetPlayer.soilQuality);
+          // 执行逻辑：种植并立即收获可可
+          const yieldAmount = getCocoaYield(cell.soilQuality);
           player.cocoa += yieldAmount;
+          cell.farmedThisRound = true;
           player.actionsTaken += 1;
 
           // 记录日志
           if (canFarmOwn) {
-            G.logs.push(`玩家 ${player.id} 在自己的土地上种可可，获得 ${yieldAmount} 个可可`);
+            G.logs.push(`玩家 ${player.id+1} 在 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
           } else if (canFarmNeighbor) {
-            G.logs.push(`玩家 ${player.id} 在邻居玩家 ${targetPlayerId} 的土地上种可可，获得 ${yieldAmount} 个可可`);
+            G.logs.push(`玩家 ${player.id+1} 在邻居玩家 ${cell.owner} 的 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
           } else if (canFarmCoop) {
-            G.logs.push(`玩家 ${player.id} 通过合作社特权在玩家 ${targetPlayerId} 的土地上种可可，获得 ${yieldAmount} 个可可`);
+            G.logs.push(`玩家 ${player.id+1} 通过合作社特权在玩家 ${cell.owner} 的 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
           }
 
           // 检查是否应该结束回合
@@ -249,8 +275,8 @@ export const SaoTomeGame: Game<G> = {
           const currentPlayerId = ctx.currentPlayer;
           const player = G.players.find((p) => p.id === parseInt(currentPlayerId));
           if (!player) {
-            return;
-          }
+      return;
+    }
 
           // 1. 严格的验证逻辑
           
@@ -301,7 +327,7 @@ export const SaoTomeGame: Game<G> = {
 
           // 记录日志
           const resourceName = resource === 'COCOA' ? '可可' : '木材';
-          G.logs.push(`玩家 ${player.id} 转让 ${amount} 个${resourceName}给玩家 ${targetPlayerId}`);
+          G.logs.push(`玩家 ${player.id+1} 转让 ${amount} 个${resourceName}给玩家 ${targetPlayerId}`);
         },
 
         // 伐木（缓冲区）：减少 Buffer Trees，增加 Timber
@@ -316,7 +342,7 @@ export const SaoTomeGame: Game<G> = {
             G.bufferTrees -= 1;
             player.timber += 1;
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id} 在缓冲区伐木，获得 1 个木材`);
+            G.logs.push(`玩家 ${player.id+1} 在缓冲区伐木，获得 1 个木材`);
 
             // 检查是否应该结束回合
             if (player.actionsTaken >= player.workers && events) {
@@ -328,9 +354,11 @@ export const SaoTomeGame: Game<G> = {
         // 扩展农场：消耗 1 Timber + 1 Cocoa，将目标格子设为 FARM
         extendFarm: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }, targetCellId: string) => {
           const player = G.players.find((p) => p.id === parseInt(ctx.currentPlayer));
+          console.log('player', JSON.stringify(player));
           if (!player) {
             return;
           }
+          G.logs.push(`玩家 ${player.id + 1} 尝试扩展农场到 ${targetCellId}`);
 
           // 检查玩家是否有足够的资源
           if (player.timber < 1 || player.cocoa < 1) {
@@ -344,7 +372,7 @@ export const SaoTomeGame: Game<G> = {
           }
 
           // 检查格子是否为空（owner === null）
-          if (targetCell.owner !== null) {
+          if (targetCell.type !== 'EMPTY') {
             return;
           }
 
@@ -358,7 +386,7 @@ export const SaoTomeGame: Game<G> = {
           targetCell.type = 'FARM';
           targetCell.soilQuality = player.soilQuality;
 
-          G.logs.push(`玩家 ${player.id} 扩展农场到 ${targetCellId}，消耗 1 木材 + 1 可可`);
+          G.logs.push(`玩家 ${player.id+1} 扩展农场到 ${targetCellId}，消耗 1 木材 + 1 可可`);
 
           // 检查是否应该结束回合
           if (player.actionsTaken >= player.workers && events) {
@@ -392,11 +420,11 @@ export const SaoTomeGame: Game<G> = {
           // 获得 1 Timber
           player.timber += 1;
           player.actionsTaken += 1;
-          G.logs.push(`玩家 ${player.id} 放弃农场 ${targetCellId}，获得 1 个木材`);
+          G.logs.push(`玩家 ${player.id+1} 放弃农场 ${targetCellId}，获得 1 个木材`);
 
           // 检查是否应该结束回合
           if (player.actionsTaken >= player.workers && events) {
-            events.endTurn();
+  events.endTurn();
           }
         },
 
@@ -412,7 +440,7 @@ export const SaoTomeGame: Game<G> = {
             G.bufferSnails -= 1;
             player.cocoa += 2;
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id} 在缓冲区捕猎蜗牛，获得 2 个可可`);
+            G.logs.push(`玩家 ${player.id+1} 在缓冲区捕猎蜗牛，获得 2 个可可`);
 
             // 检查是否应该结束回合
             if (player.actionsTaken >= player.workers && events) {
@@ -422,7 +450,7 @@ export const SaoTomeGame: Game<G> = {
             G.coreSnails -= 1;
             player.cocoa += 2;
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id} 在核心区捕猎蜗牛，获得 2 个可可`);
+            G.logs.push(`玩家 ${player.id+1} 在核心区捕猎蜗牛，获得 2 个可可`);
 
             // 检查是否应该结束回合
             if (player.actionsTaken >= player.workers && events) {
@@ -455,12 +483,12 @@ export const SaoTomeGame: Game<G> = {
             // Round 2: 直接加入合作社
             G.coopMembers.push(playerIdStr);
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id} 加入合作社`);
+            G.logs.push(`玩家 ${player.id+1} 加入合作社`);
           } else if (G.round > 2) {
             // Round > 2: 加入申请列表
             G.coopApplicants.push(playerIdStr);
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id} 申请加入合作社`);
+            G.logs.push(`玩家 ${player.id+1} 申请加入合作社`);
           }
 
           // 检查是否应该结束回合
@@ -487,7 +515,7 @@ export const SaoTomeGame: Game<G> = {
           player.actionsTaken += 1; // 消耗行动点（接人这个动作本身消耗 1 个行动点）
 
           // 记录日志
-          G.logs.push(`玩家 ${player.id} 从葡萄牙赎回了一个工人`);
+          G.logs.push(`玩家 ${player.id+1} 从葡萄牙赎回了一个工人`);
 
           // 检查是否应该结束回合
           if (player.actionsTaken >= player.workers && events) {
@@ -505,9 +533,19 @@ export const SaoTomeGame: Game<G> = {
         // 重置阶段回合计数器
         G.turnsInPhase = 0;
       },
+      onEnd: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
+        G.turnsInPhase = 0;
+      },
       turn: {
         // activePlayers: { all: 'secretStage' }, // 所有玩家同时行动
         order: TurnOrder.ONCE,
+        endIf: ({ G, ctx }: { G: G; ctx: Ctx }) => {
+          const player = G.players.find((p) => p.id === parseInt(ctx.currentPlayer));
+          return player?.secretAction !== null;
+        },
+        onEnd: ({ G, ctx }: { G: G; ctx: Ctx }) => {
+          G.turnsInPhase += 1;
+        },
       },
       next: 'calculation', // 下一阶段是 calculation
       moves: {
@@ -519,7 +557,7 @@ export const SaoTomeGame: Game<G> = {
           }
 
           player.secretAction = { type: 'DO_NOTHING' };
-          G.logs.push(`玩家 ${player.id} 选择不执行秘密行动`);
+          G.logs.push(`玩家 ${player.id+1} 执行了秘密行动`);
         },
 
         // 选择秘密行动：偷窃
@@ -540,7 +578,7 @@ export const SaoTomeGame: Game<G> = {
           };
           
           // 模糊日志，不泄露偷了谁
-          G.logs.push(`玩家 ${player.id} 执行了秘密行动`);
+          G.logs.push(`玩家 ${player.id+1} 执行了秘密行动`);
         },
 
         // 选择秘密行动：非法伐木
@@ -559,7 +597,7 @@ export const SaoTomeGame: Game<G> = {
           };
           
           // 模糊日志，不泄露具体行动
-          G.logs.push(`玩家 ${player.id} 执行了秘密行动`);
+          G.logs.push(`玩家 ${player.id+1} 执行了秘密行动`);
         },
       },
       endIf: ({ G }: { G: G }) => {
@@ -571,6 +609,7 @@ export const SaoTomeGame: Game<G> = {
 
     // 结算阶段
     calculation: {
+      next: 'action',
       onBegin: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
         // 严格按照以下顺序执行：
         
@@ -622,14 +661,12 @@ export const SaoTomeGame: Game<G> = {
 
         // 6. 统一流转：无论第几轮，都进入下一轮的 townHall 阶段
         // （真正的游戏结束判定已经存在于 townHall 阶段中，这里不需要重复判定）
-        if (events) {
-          events.setPhase('townHall');
-        }
+        events?.setPhase('action');
       },
       onEnd: ({ G }: { G: G; ctx: Ctx }) => {
         // 记录历史数据：在每轮结束时记录生态快照
         const totalSnails = G.coreSnails + G.bufferSnails;
-        const playersInPortugal = G.players.filter((p) => p.inPortugal).length;
+        const playersInPortugal = G.players.filter((p) => p.inPortugal > 0).length;
         
         G.history.push({
           round: G.round,

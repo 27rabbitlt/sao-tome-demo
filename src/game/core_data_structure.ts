@@ -15,12 +15,14 @@ export interface LandCell {
   type: 'FARM' | 'EMPTY';
   owner: string | null;          // 所有者玩家ID (字符串格式，例如: "0", "1", ...)
   soilQuality: 'GOOD' | 'MEDIUM' | 'BAD';
+  farmedThisRound: boolean;      // 本回合是否已种植（防止重复种植）
 }
 
 // 玩家结构
 export interface Player {
   id: number;
   name: string;       // 玩家名字
+  isReady: boolean;   // 玩家是否准备好
   cocoa: number;      // 可可数量
   timber: number;     // 木材数量
   workers: number;    // 工人数量 (通常是2，第二回合后可能增加) [cite: 46, 213]

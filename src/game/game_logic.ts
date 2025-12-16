@@ -27,6 +27,7 @@ export function initializeGame(): GameState {
       players.push({
         id: i,
         name: defaultNames[i],
+        isReady: false,
         cocoa: 3,
         timber: 1,
         workers: 2,
@@ -52,17 +53,19 @@ export function initializeGame(): GameState {
     for (let playerIndex = 0; playerIndex < 5; playerIndex++) {
       if (playerIndex < 2) {
         landcells.push({
-          id: `Farmland-1-of-${playerIndex}`,
+          id: `Farmland-1-of-Player-${playerIndex+1}`,
           type: 'FARM',
           owner: String(playerIndex), 
           soilQuality: players[playerIndex].soilQuality,
+          farmedThisRound: false,
         });
         for (let i = 1; i < 5; i++) {
           landcells.push({
-            id: `Farmland-${i+1}-of-${playerIndex}`,
+            id: `Farmland-${i+1}-of-Player-${playerIndex+1}`,
             type: 'EMPTY',
             owner: String(playerIndex), 
             soilQuality: players[playerIndex].soilQuality,
+            farmedThisRound: false,
           });
         }
       } else if (playerIndex < 4) {
@@ -71,6 +74,7 @@ export function initializeGame(): GameState {
           type: 'FARM',
           owner: String(playerIndex), 
           soilQuality: players[playerIndex].soilQuality,
+          farmedThisRound: false,
         });
         for (let i = 1; i < 5; i++) {
           landcells.push({
@@ -78,6 +82,7 @@ export function initializeGame(): GameState {
             type: 'EMPTY',
             owner: String(playerIndex), 
             soilQuality: players[playerIndex].soilQuality,
+            farmedThisRound: false,
           });
         }
       } else {
@@ -86,6 +91,7 @@ export function initializeGame(): GameState {
           type: 'FARM',
           owner: String(playerIndex), 
           soilQuality: players[playerIndex].soilQuality,
+          farmedThisRound: false,
         });
         for (let i = 1; i < 5; i++) {
           landcells.push({
@@ -93,6 +99,7 @@ export function initializeGame(): GameState {
             type: 'EMPTY',
             owner: String(playerIndex), 
             soilQuality: players[playerIndex].soilQuality,
+            farmedThisRound: false,
           });
         }
       }
@@ -113,7 +120,7 @@ export function initializeGame(): GameState {
     
     // 5. 返回完整的 GameState 对象
     return {
-      round: 1,
+      round: 0,
       phase: 'action',
       coreTrees: 20,
       bufferTrees: 12,
@@ -285,7 +292,7 @@ export function calculateSnailPopulation(trees: number, zone: 'CORE' | 'BUFFER')
             // 如果被抓，罚款 2 Cocoa，获得 0 Timber，循环终止
             caught = true;
             player.cocoa = Math.max(0, player.cocoa - 2); // 确保不会变成负数
-            G.logs.push(`玩家 ${player.id} 非法伐木时被护林员抓住，罚款 2 可可`);
+            G.logs.push(`玩家 ${player.id+1} 非法伐木时被护林员抓住，罚款 2 可可`);
             break; // 循环终止
           } else {
             // 如果没有被抓，记录成功砍伐
@@ -297,7 +304,7 @@ export function calculateSnailPopulation(trees: number, zone: 'CORE' | 'BUFFER')
           // 如果没被抓，减少树木，增加 Timber
           G.coreTrees = Math.max(0, G.coreTrees - successfulCuts);
           player.timber += successfulCuts;
-          G.logs.push(`玩家 ${player.id} 非法伐木 ${successfulCuts} 棵，获得 ${successfulCuts} 个木材`);
+          G.logs.push(`玩家 ${player.id+1} 非法伐木 ${successfulCuts} 棵，获得 ${successfulCuts} 个木材`);
         }
       }
     });
@@ -333,7 +340,7 @@ export function calculateSnailPopulation(trees: number, zone: 'CORE' | 'BUFFER')
         // 冲突判定：如果目标被偷次数 > 1，则偷窃失败（互相发现）
         if (stealCount > 1) {
           // 所有针对该受害者的"小偷"都空手而归
-          G.logs.push(`玩家 ${thief.id} 和他人同时偷窃玩家 ${targetId}，互相发现，偷窃失败`);
+          G.logs.push(`玩家 ${thief.id+1} 和他人同时偷窃玩家 ${targetId+1}，互相发现，偷窃失败`);
           // thief 获得 0（不需要操作，因为已经是 0）
         } else {
           // 成功偷窃：如果目标被偷次数 == 1
@@ -344,9 +351,9 @@ export function calculateSnailPopulation(trees: number, zone: 'CORE' | 'BUFFER')
             // 执行转账
             target.cocoa -= actualSteal;
             thief.cocoa += actualSteal;
-            G.logs.push(`玩家 ${thief.id} 从玩家 ${targetId} 偷窃了 ${actualSteal} 个可可`);
+            G.logs.push(`玩家 ${thief.id+1} 从玩家 ${targetId+1} 偷窃了 ${actualSteal} 个可可`);
           } else {
-            G.logs.push(`玩家 ${thief.id} 试图偷窃玩家 ${targetId}，但目标没有可可`);
+            G.logs.push(`玩家 ${thief.id+1} 试图偷窃玩家 ${targetId+1}，但目标没有可可`);
           }
         }
       }

@@ -195,7 +195,7 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
   };
 
   const boardMoves = {
-    farmCocoa: (targetPlayerId: string) => moves.farmCocoa?.(targetPlayerId),
+    farmCocoa: (cellId: string) => moves.farmCocoa?.(cellId),
     transferResource: (targetPlayerId: string, resource: 'COCOA' | 'TIMBER', amount: number) => 
       moves.transferResource?.(targetPlayerId, resource, amount),
     logBuffer: () => moves.logBuffer?.(),
