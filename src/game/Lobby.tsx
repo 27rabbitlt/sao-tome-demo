@@ -24,8 +24,8 @@ export function Lobby({ onStartGame }: LobbyProps) {
   const [mode, setMode] = useState<GameMode>('hotseat');
   const [numPlayers, setNumPlayers] = useState(2);
   const [playerNames, setPlayerNames] = useState<string[]>(DEFAULT_NAMES.slice(0, 5));
-  // const [serverUrl, setServerUrl] = useState('http://localhost:8000');
-  const [serverUrl, setServerUrl] = useState('http://192.168.0.102:8000');
+  const [serverUrl, setServerUrl] = useState('http://localhost:8000');
+  // const [serverUrl, setServerUrl] = useState('http://192.168.0.102:8000');
   const [matchID, setMatchID] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

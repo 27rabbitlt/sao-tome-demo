@@ -395,11 +395,13 @@ const SaoTomeGame = {
 // Create and start server
 const server = Server({
   games: [SaoTomeGame],
-  origins: '*',
-  // origins: [
-  //   Origins.LOCALHOST,
-  //   Origins.LOCALHOST_IN_DEVELOPMENT,
-  // ],
+  // origins: '*',
+  origins: [
+    Origins.LOCALHOST,
+    Origins.LOCALHOST_IN_DEVELOPMENT,
+    '*',
+    'http://192.168.0.102:5173',
+  ],
 });
 
 const PORT = Number(process.env.PORT) || 8000;
