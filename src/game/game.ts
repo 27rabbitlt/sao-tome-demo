@@ -354,7 +354,6 @@ export const SaoTomeGame: Game<G> = {
         // 扩展农场：消耗 1 Timber + 1 Cocoa，将目标格子设为 FARM
         extendFarm: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }, targetCellId: string) => {
           const player = G.players.find((p) => p.id === parseInt(ctx.currentPlayer));
-          console.log('player', JSON.stringify(player));
           if (!player) {
             return;
           }
@@ -376,13 +375,17 @@ export const SaoTomeGame: Game<G> = {
             return;
           }
 
+          // check if current player is the owner of the target cell
+          if (targetCell.owner !== ctx.currentPlayer) {
+            return;
+          }
+
           // 扣除资源
           player.timber -= 1;
           player.cocoa -= 1;
           player.actionsTaken += 1;
 
           // 设置格子
-          targetCell.owner = ctx.currentPlayer; // boardgame.io 使用字符串格式的玩家ID
           targetCell.type = 'FARM';
           targetCell.soilQuality = player.soilQuality;
 
@@ -413,7 +416,6 @@ export const SaoTomeGame: Game<G> = {
           }
 
           // 移除 owner，变 EMPTY
-          targetCell.owner = null;
           targetCell.type = 'EMPTY';
           targetCell.soilQuality = 'BAD';
 
@@ -618,8 +620,8 @@ export const SaoTomeGame: Game<G> = {
         resolveSecretActions(G);
 
         // 2. 计算蜗牛数量（基于再生前的树木，即非法伐木后的剩余树木）
-        const newCoreSnails = calculateSnailPopulation(G.coreTrees, 'CORE');
-        const newBufferSnails = calculateSnailPopulation(G.bufferTrees, 'BUFFER');
+        const newCoreSnails = calculateSnailPopulation(G.coreSnails, G.coreTrees, 'CORE');
+        const newBufferSnails = calculateSnailPopulation(G.bufferSnails, G.bufferTrees, 'BUFFER');
         
         G.coreSnails = newCoreSnails;
         G.bufferSnails = newBufferSnails;

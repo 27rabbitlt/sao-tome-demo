@@ -51,7 +51,7 @@ export function initializeGame(): GameState {
     // we give 5 farm lands to each player
     const landcells: LandCell[] = [];
     for (let playerIndex = 0; playerIndex < 5; playerIndex++) {
-      if (playerIndex < 2) {
+      
         landcells.push({
           id: `Farmland-1-of-Player-${playerIndex+1}`,
           type: 'FARM',
@@ -68,42 +68,8 @@ export function initializeGame(): GameState {
             farmedThisRound: false,
           });
         }
-      } else if (playerIndex < 4) {
-        landcells.push({
-          id: `Farmland-1-of-${playerIndex}`,
-          type: 'FARM',
-          owner: String(playerIndex), 
-          soilQuality: players[playerIndex].soilQuality,
-          farmedThisRound: false,
-        });
-        for (let i = 1; i < 5; i++) {
-          landcells.push({
-            id: `Farmland-${i+1}-of-${playerIndex}`,
-            type: 'EMPTY',
-            owner: String(playerIndex), 
-            soilQuality: players[playerIndex].soilQuality,
-            farmedThisRound: false,
-          });
-        }
-      } else {
-        landcells.push({
-          id: `Farmland-1-of-${playerIndex}`,
-          type: 'FARM',
-          owner: String(playerIndex), 
-          soilQuality: players[playerIndex].soilQuality,
-          farmedThisRound: false,
-        });
-        for (let i = 1; i < 5; i++) {
-          landcells.push({
-            id: `Farmland-${i+1}-of-${playerIndex}`,
-            type: 'EMPTY',
-            owner: String(playerIndex), 
-            soilQuality: players[playerIndex].soilQuality,
-            farmedThisRound: false,
-          });
-        }
-      }
     }
+      
   
     // 2. 初始化生态系统
     // 规则参考:
@@ -177,16 +143,15 @@ export function initializeGame(): GameState {
  * - 缓冲区 (Buffer): 需要3棵树供养1只蜗牛 (Math.floor(trees / 3))。
  * - 缓冲区最大蜗牛数是 4 (对应12棵树)，核心区最大是 10 (对应20棵树)。
  */
-export function calculateSnailPopulation(trees: number, zone: 'CORE' | 'BUFFER'): number {
-    let snails: number;
+export function calculateSnailPopulation(snails: number, trees: number, zone: 'CORE' | 'BUFFER'): number {
     
     if (zone === 'CORE') {
       // 核心区：需要2棵树供养1只蜗牛，最大10只
-      snails = Math.floor(trees / 2);
+      snails = Math.min(snails, Math.floor(trees / 2));
       return Math.min(snails, 10);
     } else {
       // 缓冲区：需要3棵树供养1只蜗牛，最大4只
-      snails = Math.floor(trees / 3);
+      snails = Math.min(snails, Math.floor(trees / 3));
       return Math.min(snails, 4);
     }
   }
