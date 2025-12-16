@@ -118,6 +118,7 @@ function processEndOfRound(G: GameState) {
   });
   G.dayActionsThisRound = {};
   G.nightActionsRevealed = false;
+  G.playersEndedDay = [];
 
   // Check win condition
   const winner = Object.values(G.players).find(p => p.cocoa >= CONSTANTS.WIN_COCOA_TARGET);
@@ -304,6 +305,12 @@ const improveLand: Move<GameState> = ({ G, playerID }, landId: string) => {
 const endTurn: Move<GameState> = ({ G, playerID, events }) => {
   if (!playerID) return INVALID_MOVE;
   const player = G.players[playerID];
+  
+  // Mark this player as having ended their day turn
+  if (!G.playersEndedDay.includes(playerID)) {
+    G.playersEndedDay.push(playerID);
+  }
+  
   addEvent(G, `⏭️ ${player.name} 结束了回合`, 'info');
   events.endTurn();
 };
@@ -343,6 +350,7 @@ export const SaoTomeGame: Game<GameState> = {
       dayActionsThisRound: {},
       nightActionsRevealed: false,
       turnOrder,
+      playersEndedDay: [],
     };
   },
 
@@ -354,13 +362,17 @@ export const SaoTomeGame: Game<GameState> = {
       turn: {
         order: TurnOrder.DEFAULT,
       },
-      endIf: () => {
-        // Day phase ends when user triggers transition to night
-        // For now, we let it continue naturally until all players pass
+      endIf: ({ G, ctx }) => {
+        // Day phase ends when all players have ended their turn
+        const numPlayers = ctx.numPlayers;
+        const allPlayersEnded = G.playersEndedDay.length >= numPlayers;
+        return allPlayersEnded;
       },
       next: 'night',
       onBegin: ({ G }) => {
         G.phase = 'day';
+        // Reset the list of players who ended their day turn
+        G.playersEndedDay = [];
       },
     },
 

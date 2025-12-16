@@ -69,6 +69,8 @@ export interface GameState {
   nightActionsRevealed: boolean;
   turnOrder: string[];
   winner?: string;
+  // Track which players have ended their day turn
+  playersEndedDay: string[];
 }
 
 // Game constants
