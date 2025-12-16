@@ -316,14 +316,16 @@ const endTurn: Move<GameState> = ({ G, playerID, events }) => {
 };
 
 // ============ Night Phase Moves ============
-const setNightAction: Move<GameState> = ({ G, playerID, events }, action: NightAction) => {
+const setNightAction: Move<GameState> = ({ G, playerID }, action: NightAction) => {
   if (!playerID) return INVALID_MOVE;
   const player = G.players[playerID];
   if (!player) return INVALID_MOVE;
+  
+  // Don't allow re-selecting
+  if (player.secretAction) return INVALID_MOVE;
 
   player.secretAction = action;
-  // After selecting night action, end turn to let next player choose
-  events.endTurn();
+  // Turn will end automatically via turn.endIf
 };
 
 // ============ Game Definition ============
@@ -370,6 +372,7 @@ export const SaoTomeGame: Game<GameState> = {
       },
       next: 'night',
       onBegin: ({ G }) => {
+        console.log('day begins');
         G.phase = 'day';
         // Reset the list of players who ended their day turn
         G.playersEndedDay = [];
@@ -381,15 +384,22 @@ export const SaoTomeGame: Game<GameState> = {
       moves: { setNightAction },
       turn: {
         order: TurnOrder.DEFAULT,
+        // Auto-end turn when current player has selected their action
+        endIf: ({ G, ctx }) => {
+          const player = G.players[ctx.currentPlayer];
+          return player && !!player.secretAction;
+        },
       },
-      next: 'nightReveal',
+      next: 'day',
       onBegin: ({ G }) => {
         G.phase = 'night';
         addEvent(G, '🌙 夜幕降临，轮流选择秘密行动...', 'info');
       },
       endIf: ({ G }) => {
-        // End when all players have selected their night action
+        // End phase when all players have selected their night action
         const allSelected = Object.values(G.players).every(p => p.secretAction);
+        console.log(`[Night Phase] Checking endIf: ${allSelected ? 'ALL SELECTED' : 'waiting...'}`, 
+          Object.entries(G.players).map(([, p]) => `${p.name}: ${p.secretAction ? p.secretAction.type : 'none'}`));
         return allSelected;
       },
     },
@@ -399,6 +409,7 @@ export const SaoTomeGame: Game<GameState> = {
       moves: {},
       onBegin: ({ G }) => {
         G.phase = 'nightReveal';
+        addEvent(G, `night reveal 第 ${G.currentRound} 回合开始, G.phase: ${G.phase}`, 'info');
         processNightActions(G);
       },
       endIf: () => true, // Immediately end
@@ -408,19 +419,22 @@ export const SaoTomeGame: Game<GameState> = {
     // Day end: process end of round and check win condition
     dayEnd: {
       moves: {},
-      onBegin: ({ G }) => {
-        processEndOfRound(G);
-      },
       endIf: () => true,
       next: ({ G }) => {
         if (G.phase === 'gameEnd') {
+          // addEvent(G, `next ☀️ 第 ${G.currentRound} 回合开始, G.phase: ${G.phase}`, 'info');
           return undefined; // Game over
         }
+          // addEvent(G, `next ☀️ 第 ${G.currentRound} 回合开始, G.phase: ${G.phase}`, 'info');
         return 'day';
+      },
+      onBegin: ({ G }) => {
+        processEndOfRound(G);
+        addEvent(G, `dayEnd 第 ${G.currentRound} 回合开始, G.phase: ${G.phase}`, 'info');
       },
       onEnd: ({ G }) => {
         if (G.phase !== 'gameEnd') {
-          addEvent(G, `☀️ 第 ${G.currentRound} 回合开始`, 'info');
+          addEvent(G, `☀️ 第 ${G.currentRound} 回合开始, G.phase: ${G.phase}`, 'info');
         }
       },
     },
