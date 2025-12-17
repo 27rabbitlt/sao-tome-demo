@@ -7,7 +7,8 @@ export type GamePhase =
   | 'action'          // 玩家行动阶段 [cite: 72]
   | 'secret'           // 秘密行动阶段 (黑夜) [cite: 80]
   | 'calculation'     // 结算阶段 (生长、蜗牛、税收) [cite: 85]
-  | 'gameOver';
+  | 'gameOver'
+  | 'registration';
 
 // 地块接口
 export interface LandCell {

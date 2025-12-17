@@ -91,6 +91,7 @@ function CurrentTurnIndicator({
     'secret': '🌙 秘密行动阶段',
     'calculation': '📊 结算阶段',
     'gameOver': '🏆 游戏结束',
+    'registration': '🔄 注册阶段',
   };
 
   return (
@@ -124,6 +125,7 @@ function PhaseIndicator({
     'secret': { name: '🌙 秘密行动阶段', desc: '所有玩家同时选择秘密行动' },
     'calculation': { name: '📊 结算阶段', desc: '计算生态变化和资源更新' },
     'gameOver': { name: '🏆 游戏结束', desc: '感谢游玩！' },
+    'registration': { name: '🔄 注册阶段', desc: '玩家准备阶段' },
   };
 
   const phaseInfo = phaseLabels[phase] || { name: phase, desc: '' };
@@ -171,23 +173,20 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
   // Find current player from array
   const currentTurnPlayer = G.players.find(p => p.id === parseInt(currentTurnPlayerId));
   const myPlayer = G.players.find(p => p.id === parseInt(myPlayerId));
-
   // Set player names on game start if provided (only once)
   useEffect(() => {
-    if (playerNames && moves.setPlayerName && G.round === 1) {
+    console.log('useEffect playerNames', playerNames, myPlayerId);
+    if (G.round === 0) {
       G.players.forEach((player, index) => {
-        if (playerNames[index] && playerNames[index] !== player.name) {
-          // Set name directly in state (for hotseat) or via move (for online)
-          if (hotseatMode) {
-            player.name = playerNames[index];
-          } else if (player.id === parseInt(myPlayerId || '0')) {
-            // For online mode, only set own name via move
-            moves.setMyName?.(playerNames[index]);
-          }
+        if (parseInt(myPlayerId) !== player.id) {
+          return;
+        }
+        if (playerNames && playerNames[index] && playerNames[index] !== player.name) {
+          moves.ready?.(playerNames[index], index);
         }
       });
     }
-  }, [playerNames, G.round, hotseatMode, myPlayerId, moves.setPlayerName, moves.setMyName]);
+  }, [playerNames, moves.ready]);
 
   // Use names from game state
   const getPlayerWithCustomName = (player: GameState['players'][0]) => {

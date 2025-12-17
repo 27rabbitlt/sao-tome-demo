@@ -3,6 +3,7 @@
 import type { Game, Ctx } from 'boardgame.io';
 import { TurnOrder } from 'boardgame.io/core';
 import type { GameState } from './core_data_structure';
+import { ActivePlayers } from 'boardgame.io/core';
 import {
   initializeGame,
   calculateSnailPopulation,
@@ -38,37 +39,52 @@ export const SaoTomeGame: Game<G> = {
 
   // 添加设置玩家名字的 move（可以在任何阶段使用）
   moves: {
-    setPlayerName: ({ G, ctx }: { G: G; ctx: Ctx }, playerId: number, name: string) => {
-      const player = G.players.find(p => p.id === playerId);
-      if (player && name.trim()) {
-        player.name = name.trim();
-      }
-    },
-    setMyName: ({ G, ctx }: { G: G; ctx: Ctx }, name: string) => {
-      const playerId = parseInt(ctx.currentPlayer);
-      const player = G.players.find(p => p.id === playerId);
-      if (player && name.trim()) {
-        player.name = name.trim();
-      }
-    },
   },
 
   // 阶段定义
   phases: {
-    // registration: {
-    //   start: true,
-    //   next: 'action',
-    //   activePlayers: { ActivePlayers.ALL },
-    //   endIf: ({ G, ctx }: { G: G; ctx: Ctx }) => {
-    //     return G.players.every((p) => p.isReady);
-    //   },
-    //   moves: {
-    //     setName: ({G, ctx, playerId}: {G: G; ctx: Ctx; playerId: number}, name: string) => {
-    //       G.players[playerId].name = name;
-    //       G.players[playerId].isReady = true;
-    //     }
-    //   }
-    // },
+    registration: {
+      start: true,
+      next: 'action',
+      endIf: ({ G, ctx }: { G: G; ctx: Ctx }) => {
+        return G.players.every((p) => p.isReady);
+        // return false;
+      },
+      onBegin: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
+        console.log('registration phase started');
+      },
+      turn: {
+        activePlayers: { 
+          all: 'getReady'
+         },
+        stages: {
+          getReady: {
+            moves: {
+              ready: ({G, ctx, events}: {G: G; ctx: Ctx; events?: any}, name: string, idx: number) => {
+                console.log('ready in stages.getReady', name, idx);
+                const player = G.players[idx];
+                if (!player) {
+                  return;
+                }
+                if (player.isReady) {
+                  return;
+                }
+                player.isReady = true;
+                player.name = name;
+                G.logs.push(`玩家 ${player.id+1} ${name} 准备好了`);
+                if (G.players.every((p) => p.isReady)) {
+                  events.endPhase();
+                }
+              }
+            }
+          }
+        },
+      },
+      onEnd: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
+        console.log('registration phase ended');
+      }
+    },
+
     // 市政厅讨论阶段
     // townHall: {
     //   next: 'action', // 下一阶段是 action
@@ -181,7 +197,7 @@ export const SaoTomeGame: Game<G> = {
 
     // 玩家行动阶段
     action: {
-      start: true,
+      // start: true,
       onBegin: ({ G }: { G: G; ctx: Ctx }) => {
         // 重置阶段回合计数器
         G.phase = 'action';
@@ -417,7 +433,6 @@ export const SaoTomeGame: Game<G> = {
 
           // 移除 owner，变 EMPTY
           targetCell.type = 'EMPTY';
-          targetCell.soilQuality = 'BAD';
 
           // 获得 1 Timber
           player.timber += 1;

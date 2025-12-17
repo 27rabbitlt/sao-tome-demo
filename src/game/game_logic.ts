@@ -87,7 +87,7 @@ export function initializeGame(): GameState {
     // 5. 返回完整的 GameState 对象
     return {
       round: 0,
-      phase: 'action',
+      phase: 'registration',
       coreTrees: 20,
       bufferTrees: 12,
       coreSnails: 10,
