@@ -10,7 +10,7 @@ const server = Server({
     Origins.LOCALHOST_IN_DEVELOPMENT,
     // Add your local network IP for LAN play
     /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
-    /^http:\/\/178\.128\.197\.93:5173$/,
+    /^http:\/\/178\.128\.197\.93:\d+$/,
   ],
 });
 
