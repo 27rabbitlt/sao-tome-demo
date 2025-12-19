@@ -146,6 +146,30 @@ export function Lobby({ onStartGame }: LobbyProps) {
     }
   };
 
+  const handleJoinAsSpectator = async () => {
+    if (!pendingMatchID) return;
+    
+    setJoiningSlot(-1); // Use -1 to indicate spectator
+    setError(null);
+    try {
+      // For spectator, we don't need to join a slot, just connect to the match
+      // We'll use null as playerID to indicate spectator mode
+      onStartGame({
+        mode: mode === 'online-host' ? 'online-host' : 'online-join',
+        numPlayers: pendingNumPlayers,
+        playerNames: Array(pendingNumPlayers).fill('').map((_, i) => `玩家 ${i + 1}`),
+        serverUrl,
+        matchID: pendingMatchID,
+        playerID: undefined, // undefined means spectator
+        credentials: undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加入房间失败');
+    } finally {
+      setJoiningSlot(null);
+    }
+  };
+
   const handleStart = () => {
     if (mode === 'hotseat') {
       onStartGame({
@@ -221,6 +245,22 @@ export function Lobby({ onStartGame }: LobbyProps) {
                   {joiningSlot === i && <span className="slot-loading">加入中...</span>}
                 </button>
               ))}
+            </div>
+
+            <div className="spectator-join-section">
+              <div className="spectator-divider">
+                <span>或</span>
+              </div>
+              <button
+                className={`spectator-btn ${joiningSlot === -1 ? 'joining' : ''}`}
+                onClick={handleJoinAsSpectator}
+                disabled={joiningSlot !== null}
+              >
+                <span className="spectator-icon">👁️</span>
+                <span className="spectator-text">以旁观者身份加入</span>
+                <span className="spectator-desc">查看游戏进程，无法执行行动</span>
+                {joiningSlot === -1 && <span className="slot-loading">加入中...</span>}
+              </button>
             </div>
 
             <button className="back-btn" onClick={handleBack}>

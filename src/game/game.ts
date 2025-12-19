@@ -159,46 +159,6 @@ export const SaoTomeGame: Game<G> = {
         return allPlayersChose;
       },
       onEnd: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
-        // 处理未做出选择的玩家（自动破产）
-        // 如果玩家既没有支付也没有送工人，且资源不足，自动破产
-        G.players.forEach((player) => {
-          // 如果玩家已经选择了送工人（actionsTaken === 2），不需要再处理
-          if (player.actionsTaken === 2) {
-            return;
-          }
-
-          // 如果玩家已经支付了（actionsTaken === 1），不需要再处理
-          if (player.actionsTaken === 1) {
-            return;
-          }
-
-          // 如果玩家没有做出选择，检查资源是否足够支付
-          const costTimber = G.livingCost.timber;
-          const costCocoa = (G.livingCost.cocoa * player.workers) + G.taxPenalty;
-
-          // 如果玩家资源不足，自动破产
-          if (player.timber < costTimber || player.cocoa < costCocoa) {
-            // 破产扣除：将玩家现有的 timber 和 cocoa 全部清零
-            const lostTimber = player.timber;
-            const lostCocoa = player.cocoa;
-            player.timber = 0;
-            player.cocoa = 0;
-
-            // 送去葡萄牙
-            player.workers = Math.max(1, player.workers - 1); // 减少劳动力，但至少保留1个
-            player.inPortugal = player.inPortugal + 1;
-
-            // 首次救济金：如果 joinCoopRound === 0（第一次发生）
-            if (player.joinCoopRound === 0) {
-              player.cocoa += 1;
-              player.joinCoopRound = 1;
-              G.logs.push(`玩家 ${player.id + 1} ${player.name || ''} 破产！失去 ${lostTimber} 木材 + ${lostCocoa} 可可，工人减少到 ${player.workers}，首次前往葡萄牙获得 1 可可救济金`);
-            } else {
-              G.logs.push(`玩家 ${player.id + 1} ${player.name || ''} 破产！失去 ${lostTimber} 木材 + ${lostCocoa} 可可，工人减少到 ${player.workers}，再次前往葡萄牙`);
-            }
-          }
-        });
-        
         // 重置所有玩家的 actionsTaken（为下一阶段准备）
         G.players.forEach((player) => {
           player.actionsTaken = 0;
@@ -206,13 +166,13 @@ export const SaoTomeGame: Game<G> = {
 
         // 检查游戏结束条件（在支付生活成本之后）
         // 规则书指出游戏在 Round 6 支付完生活费后结束
-        if (G.round === 6 && events) {
+        if (G.round === 5 && events) {
           // 计算最终状态信息
-          const survivors = G.players.filter((p) => p.inPortugal === 0 || p.workers > 0).length;
+          const survivors = G.players;
           const finalTotalSnails = G.coreSnails + G.bufferSnails;
           const finalTotalTrees = G.coreTrees + G.bufferTrees;
 
-          G.logs.push(`游戏结束！第 6 轮支付完成。存活玩家：${survivors}，最终生态：${finalTotalTrees} 棵树，${finalTotalSnails} 只蜗牛`);
+          G.logs.push(`游戏结束！第 5 轮支付完成。最终生态：${finalTotalTrees} 棵树，${finalTotalSnails} 只蜗牛`);
 
           // 触发游戏结束
           events.endGame({
@@ -316,13 +276,15 @@ export const SaoTomeGame: Game<G> = {
 
           // 前置检查：玩家只能在以下三种情况下耕种
           const canFarmOwn = cell.owner === currentPlayerId; // 耕种自己的地
-          const canFarmNeighbor = cell.owner && isNeighbor(currentPlayerId, cell.owner); // 耕种邻居的地
-          const isCoopMember = G.coopMembers.includes(currentPlayerId); // 发起者在合作社
-          const targetIsCoopMember = cell.owner ? G.coopMembers.includes(cell.owner) : false; // 目标在合作社
-          const canFarmCoop = isCoopMember && targetIsCoopMember; // 合作社特权（远程耕作）
+          // 只检查正式成员（coopMembers），不包括申请人（coopApplicants）
+          const isCoopMember = G.coopMembers.includes(currentPlayerId); // 发起者在合作社（正式成员）
+          const targetIsCoopMember = cell.owner ? G.coopMembers.includes(cell.owner) : false; // 目标在合作社（正式成员）
+          // 合作社特权（远程耕作）：如果玩家在合作社，可以在任何合作社成员的土地上耕种（不包括自己的地）
+          // 注意：只有正式成员（coopMembers）才能使用合作社特权，申请人（coopApplicants）不能
+          const canFarmCoop = isCoopMember && targetIsCoopMember && cell.owner !== currentPlayerId;
 
           // 如果不满足上述任一条件，返回无效移动
-          if (!canFarmOwn && !canFarmNeighbor && !canFarmCoop) {
+          if (!canFarmOwn && !canFarmCoop) {
             return;
           }
 
@@ -332,13 +294,14 @@ export const SaoTomeGame: Game<G> = {
           cell.farmedThisRound = true;
           player.actionsTaken += 1;
 
+          // get target player
+          const targetPlayer = G.players.find((p) => p.id === parseInt(cell.owner ? cell.owner : ''));
+
           // 记录日志
           if (canFarmOwn) {
-            G.logs.push(`玩家 ${player.id+1} 在 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
-          } else if (canFarmNeighbor) {
-            G.logs.push(`玩家 ${player.id+1} 在邻居玩家 ${cell.owner} 的 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
+            G.logs.push(`玩家 ${player.id+1} ${player.name} 在 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
           } else if (canFarmCoop) {
-            G.logs.push(`玩家 ${player.id+1} 通过合作社特权在玩家 ${cell.owner} 的 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
+            G.logs.push(`玩家 ${player.id+1} ${player.name} 通过合作社特权在玩家 ${cell.owner} ${targetPlayer?.name} 的 ${cellId} 上种植可可，获得 ${yieldAmount} 个可可`);
           }
 
           // 检查是否应该结束回合
@@ -419,7 +382,7 @@ export const SaoTomeGame: Game<G> = {
             G.bufferTrees -= 1;
             player.timber += 1;
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id+1} 在缓冲区伐木，获得 1 个木材`);
+            G.logs.push(`玩家 ${player.id+1} ${player.name} 在缓冲区伐木，获得 1 个木材`);
 
             // 检查是否应该结束回合
             if (player.actionsTaken >= player.workers && events) {
@@ -434,7 +397,6 @@ export const SaoTomeGame: Game<G> = {
           if (!player) {
             return;
           }
-          G.logs.push(`玩家 ${player.id + 1} 尝试扩展农场到 ${targetCellId}`);
 
           // 检查玩家是否有足够的资源
           if (player.timber < 1 || player.cocoa < 1) {
@@ -466,7 +428,7 @@ export const SaoTomeGame: Game<G> = {
           targetCell.type = 'FARM';
           targetCell.soilQuality = player.soilQuality;
 
-          G.logs.push(`玩家 ${player.id+1} 扩展农场到 ${targetCellId}，消耗 1 木材 + 1 可可`);
+          G.logs.push(`玩家 ${player.id+1} ${player.name} 扩展农场到 ${targetCellId}，消耗 1 木材 + 1 可可`);
 
           // 检查是否应该结束回合
           if (player.actionsTaken >= player.workers && events) {
@@ -560,13 +522,16 @@ export const SaoTomeGame: Game<G> = {
           if (G.round === 2) {
             // Round 2: 直接加入合作社
             G.coopMembers.push(playerIdStr);
+            player.joinCoop = true;
+            player.joinCoopRound = G.round;
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id+1} 加入合作社`);
+            G.logs.push(`玩家 ${player.id+1} ${player.name} 加入合作社`);
           } else if (G.round > 2) {
-            // Round > 2: 加入申请列表
+            // Round > 2: 加入申请列表（还未通过，所以不设置 joinCoop = true）
             G.coopApplicants.push(playerIdStr);
+            // joinCoop 和 joinCoopRound 在申请被批准时设置（在 townHall 阶段）
             player.actionsTaken += 1;
-            G.logs.push(`玩家 ${player.id+1} 申请加入合作社`);
+            G.logs.push(`玩家 ${player.id+1} ${player.name} 申请加入合作社`);
           }
 
           // 检查是否应该结束回合
@@ -593,10 +558,27 @@ export const SaoTomeGame: Game<G> = {
           player.actionsTaken += 1; // 消耗行动点（接人这个动作本身消耗 1 个行动点）
 
           // 记录日志
-          G.logs.push(`玩家 ${player.id+1} 从葡萄牙赎回了一个工人`);
+          G.logs.push(`玩家 ${player.id+1} ${player.name} 从葡萄牙赎回了一个工人`);
 
           // 检查是否应该结束回合
           if (player.actionsTaken >= player.workers && events) {
+            events.endTurn();
+          }
+        },
+
+        // 手动结束回合：允许玩家在任何时候结束回合
+        endTurn: ({ G, ctx, events }: { G: G; ctx: Ctx; events?: any }) => {
+          const currentPlayerId = ctx.currentPlayer;
+          const player = G.players.find((p) => p.id === parseInt(currentPlayerId));
+          if (!player) {
+            return;
+          }
+
+          // 记录日志
+          G.logs.push(`玩家 ${player.id + 1} ${player.name || ''} 结束回合`);
+          
+          // 结束回合
+          if (events) {
             events.endTurn();
           }
         },
@@ -636,7 +618,7 @@ export const SaoTomeGame: Game<G> = {
           }
 
           player.secretAction = { type: 'DO_NOTHING' };
-          G.logs.push(`玩家 ${player.id+1} 执行了秘密行动`);
+          G.logs.push(`玩家 ${player.id+1} ${player.name} 执行了秘密行动`);
         },
 
         // 选择秘密行动：偷窃
@@ -657,7 +639,7 @@ export const SaoTomeGame: Game<G> = {
           };
           
           // 模糊日志，不泄露偷了谁
-          G.logs.push(`玩家 ${player.id+1} 执行了秘密行动`);
+          G.logs.push(`玩家 ${player.id+1} ${player.name} 执行了秘密行动`);
         },
 
         // 选择秘密行动：非法伐木
@@ -676,7 +658,7 @@ export const SaoTomeGame: Game<G> = {
           };
           
           // 模糊日志，不泄露具体行动
-          G.logs.push(`玩家 ${player.id+1} 执行了秘密行动`);
+          G.logs.push(`玩家 ${player.id+1} ${player.name} 执行了秘密行动`);
         },
       },
       endIf: ({ G }: { G: G }) => {

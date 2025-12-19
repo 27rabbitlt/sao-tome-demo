@@ -111,6 +111,53 @@ function PortugalFamiliesPanel({ players }: { players: GameState['players'] }) {
   );
 }
 
+function CooperativeMembersPanel({ 
+  players, 
+  coopMembers 
+}: { 
+  players: GameState['players'];
+  coopMembers: string[];
+}) {
+  // 获取合作社成员信息
+  const members = coopMembers
+    .map((memberId) => {
+      const player = players.find((p) => p.id === parseInt(memberId));
+      return player
+        ? {
+            playerId: player.id,
+            playerName: player.name || `玩家 ${player.id + 1}`,
+          }
+        : null;
+    })
+    .filter((member): member is NonNullable<typeof member> => member !== null);
+
+  if (members.length === 0) {
+    return (
+      <div className="cooperative-panel">
+        <h3>🤝 合作社成员</h3>
+        <div className="cooperative-members-list">
+          <div className="cooperative-member-item empty">
+            <span>目前没有合作社成员</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="cooperative-panel">
+      <h3>🤝 合作社成员</h3>
+      <div className="cooperative-members-list">
+        {members.map((member) => (
+          <div key={member.playerId} className="cooperative-member-item">
+            <span className="member-name">{member.playerName}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CurrentTurnIndicator({
   currentPlayerId,
   currentPlayer,
@@ -205,20 +252,22 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
   
   // For hotseat mode, we control all players
   // For online mode, playerID is fixed
-  const myPlayerId = hotseatMode ? currentTurnPlayerId : (playerID || '0');
+  // Check if playerID is null/undefined or not in players list (spectator mode)
+  const isSpectator = !hotseatMode && (playerID === null || playerID === undefined || !G.players.some(p => p.id === parseInt(playerID || '0')));
+  const myPlayerId = hotseatMode ? currentTurnPlayerId : (isSpectator ? null : (playerID || '0'));
   
-  // Check if it's my turn
-  const isMyTurn = myPlayerId === currentTurnPlayerId;
+  // Check if it's my turn (spectators never have a turn)
+  const isMyTurn = !isSpectator && myPlayerId === currentTurnPlayerId;
   
   // Find current player from array
   const currentTurnPlayer = G.players.find(p => p.id === parseInt(currentTurnPlayerId));
-  const myPlayer = G.players.find(p => p.id === parseInt(myPlayerId));
+  const myPlayer = isSpectator ? null : G.players.find(p => p.id === parseInt(myPlayerId || '0'));
   // Set player names on game start if provided (only once)
   useEffect(() => {
     console.log('useEffect playerNames', playerNames, myPlayerId);
-    if (G.round === 0) {
+    if (G.round === 0 && myPlayerId !== null) {
       G.players.forEach((player, index) => {
-        if (parseInt(myPlayerId) !== player.id) {
+        if (parseInt(myPlayerId || '0') !== player.id) {
           return;
         }
         if (playerNames && playerNames[index] && playerNames[index] !== player.name) {
@@ -226,7 +275,7 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
         }
       });
     }
-  }, [playerNames, moves.ready]);
+  }, [playerNames, moves.ready, myPlayerId]);
 
   // Use names from game state
   const getPlayerWithCustomName = (player: GameState['players'][0]) => {
@@ -248,6 +297,7 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
     illegalLog: (zone: 'CORE' | 'BUFFER', amount: number) => moves.illegalLog?.(zone, amount),
     payLivingCost: () => moves.payLivingCost?.(),
     sendWorkerToPortugal: () => moves.sendWorkerToPortugal?.(),
+    endTurn: () => moves.endTurn?.(),
     setMyName: (name: string) => moves.setMyName?.(name),
   };
 
@@ -275,6 +325,12 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
       </div>
 
       <div className="game-main">
+        {isSpectator && (
+          <div className="spectator-banner">
+            <h2>👁️ 旁观者模式</h2>
+            <p>您可以查看所有玩家的完整信息，但无法执行任何行动</p>
+          </div>
+        )}
         <div className="players-area">
           {G.players && G.players.length > 0 ? (
             G.players.map((player) => {
@@ -282,16 +338,20 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
               const isCurrentPlayer = playerIdNum === parseInt(currentTurnPlayerId);
               // In hotseat mode, canAct if it's the current player's turn
               // In online mode, canAct if it's my player and my turn
-              const canPlayerAct = hotseatMode 
-                ? isCurrentPlayer && isMyTurn
-                : playerIdNum === parseInt(myPlayerId) && isMyTurn;
+              // Spectators can never act
+              const canPlayerAct = isSpectator 
+                ? false 
+                : hotseatMode 
+                  ? isCurrentPlayer && isMyTurn
+                  : playerIdNum === parseInt(myPlayerId || '0') && isMyTurn;
               
               return (
                 <PlayerPanel
                   key={player.id}
                   player={getPlayerWithCustomName(player)}
                   isCurrentTurn={isCurrentPlayer}
-                  isMyPlayer={hotseatMode ? isCurrentPlayer : playerIdNum === parseInt(myPlayerId)}
+                  isMyPlayer={isSpectator ? false : (hotseatMode ? isCurrentPlayer : playerIdNum === parseInt(myPlayerId || '0'))}
+                  isSpectator={isSpectator}
                   canAct={canPlayerAct}
                   gameState={G}
                   moves={boardMoves}
@@ -306,6 +366,9 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
 
         <aside className="game-sidebar">
           <GameLog logs={G.logs} />
+          
+          {/* 合作社成员列表 */}
+          <CooperativeMembersPanel players={G.players} coopMembers={G.coopMembers} />
           
           {/* 葡萄牙家庭人数显示 */}
           <PortugalFamiliesPanel players={G.players} />

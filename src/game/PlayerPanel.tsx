@@ -21,6 +21,7 @@ interface PlayerPanelProps {
     illegalLog?: (zone: 'CORE' | 'BUFFER', amount: number) => void;
     payLivingCost?: () => void;
     sendWorkerToPortugal?: () => void;
+    endTurn?: () => void;
   };
   allPlayers: (Player & { name?: string })[];
 }
@@ -60,21 +61,27 @@ function LandCellDisplay({
   // 检查是否可以在此地块种植
   const canFarmOwn = cell.owner === String(playerId);
   const canFarmNeighbor = cell.owner ? Math.abs(playerId - parseInt(cell.owner)) === 1 : false;
+  // 只检查正式成员（coopMembers），不包括申请人（coopApplicants）
   const isCoopMember = gameState.coopMembers.includes(String(playerId));
   const targetIsCoopMember = cell.owner ? gameState.coopMembers.includes(cell.owner) : false;
-  const canFarmCoop = isCoopMember && targetIsCoopMember;
+  // 合作社特权：如果玩家在合作社，可以在任何合作社成员的土地上耕种（远程耕作）
+  // 注意：只有正式成员（coopMembers）才能使用合作社特权，申请人（coopApplicants）不能
+  const canFarmCoop = isCoopMember && targetIsCoopMember && cell.owner !== String(playerId);
   const canFarm = canFarmOwn || canFarmNeighbor || canFarmCoop;
   
   const canPlant = canAct && isActionPhase && hasActionsLeft && canFarm && !cell.farmedThisRound && cell.type === 'FARM';
 
   return (
-    <div className={`land-cell ${cell.type} ${isOwned ? 'owned' : ''}`}>
+    <div className={`land-cell ${cell.type} ${isOwned ? 'owned' : ''} ${cell.farmedThisRound ? 'farmed' : ''}`}>
       <div className="cell-header">
         <span className="cell-id">{cell.id}</span>
         <span className="cell-type">
           {cell.type === 'FARM' && '🌾'}
           {cell.type === 'EMPTY' && '🏜️'}
         </span>
+        {cell.farmedThisRound && cell.type === 'FARM' && (
+          <span className="farmed-badge">✓ 已种植</span>
+        )}
       </div>
       <div className="cell-info">
           <>
@@ -82,7 +89,12 @@ function LandCellDisplay({
           土壤: {cell.soilQuality === 'GOOD' ? '⭐优质' : cell.soilQuality === 'MEDIUM' ? '⭐中等' : '⭐劣质'}
         </div>
         {cell.owner && (
-          <div className="cell-owner">所有者: {cellOwnerPlayer?.name || `玩家 ${cell.owner}`}</div>
+          <div className="cell-owner">
+            所有者: {cellOwnerPlayer?.name || `玩家 ${cell.owner}`}
+            {canFarmCoop && (
+              <span className="coop-farm-indicator"> 🤝 合作社特权</span>
+            )}
+          </div>
         )}
           </>
 
@@ -286,15 +298,16 @@ function SecretActionPanel({
   );
 }
 
-export function PlayerPanel({ 
-  player, 
+export function PlayerPanel({
+  player,
   isCurrentTurn,
   isMyPlayer,
+  isSpectator = false,
   canAct,
   gameState,
   moves,
   allPlayers,
-}: PlayerPanelProps) {
+}: PlayerPanelProps & { isSpectator?: boolean }) {
   // Safety checks
   if (!player || !gameState) {
     return <div>加载中...</div>;
@@ -308,8 +321,14 @@ export function PlayerPanel({
   const hasResources = (player.timber || 0) >= 1 && (player.cocoa || 0) >= 1;
   const isInCoop = (gameState.coopMembers || []).includes(String(player.id));
   
+  let livingCostTimber = 0;
   // 计算生活成本
-  const livingCostTimber = gameState.livingCost?.timber || 1;
+  // if we only have 0 worker, we dont need to pay timber cost
+  if (player.workers === 0) {
+    livingCostTimber = 0;
+  } else {
+    livingCostTimber = gameState.livingCost?.timber || 1;
+  }
   const livingCostCocoa = (gameState.livingCost?.cocoa || 1) * player.workers + (gameState.taxPenalty || 0);
   const canAffordLivingCost = (player.timber || 0) >= livingCostTimber && (player.cocoa || 0) >= livingCostCocoa;
   // const canSendWorker = (player.workers || 0) > 1; // 至少需要保留1个工人
@@ -320,6 +339,19 @@ export function PlayerPanel({
   const cells = gameState.cells || [];
   const playerCells = cells.filter(cell => cell.owner === String(player.id));
   const emptyCells = cells.filter(cell => cell.type === 'EMPTY' && cell.owner === null);
+  
+  // Get cooperative members' cells that can be farmed (合作社成员可以耕种的地块)
+  // 注意：只显示正式合作社成员（coopMembers）的地块，不包括申请人（coopApplicants）的地块
+  const coopFarmableCells = isInCoop 
+    ? cells.filter(cell => {
+        const isOwned = cell.owner === String(player.id);
+        // 只检查正式成员（coopMembers），不包括申请人（coopApplicants）
+        const targetIsCoopMember = cell.owner ? gameState.coopMembers.includes(cell.owner) : false;
+        const canFarmCoop = isInCoop && targetIsCoopMember && cell.owner !== String(player.id);
+        // 显示合作社成员的地块（不包括自己的和邻居的，因为这些已经在其他地方显示了）
+        return cell.type === 'FARM' && cell.owner && !isOwned && canFarmCoop;
+      })
+    : [];
 
   return (
     <div className={`player-panel ${isCurrentTurn ? 'current-turn' : ''} ${isMyPlayer ? 'my-player' : ''} ${player.inPortugal ? 'in-portugal' : ''}`}>
@@ -344,15 +376,15 @@ export function PlayerPanel({
       <div className="player-resources">
         <div className="resource cocoa">
           <span className="resource-icon">🍫</span>
-          <span className={`resource-value ${!isMyPlayer ? 'hidden-resource' : ''}`}>
-            {isMyPlayer ? player.cocoa : '?'}
+          <span className={`resource-value ${!isMyPlayer && !isSpectator ? 'hidden-resource' : ''}`}>
+            {isMyPlayer || isSpectator ? player.cocoa : '?'}
           </span>
           <span className="resource-label">可可</span>
         </div>
         <div className="resource timber">
           <span className="resource-icon">🪵</span>
-          <span className={`resource-value ${!isMyPlayer ? 'hidden-resource' : ''}`}>
-            {isMyPlayer ? player.timber : '?'}
+          <span className={`resource-value ${!isMyPlayer && !isSpectator ? 'hidden-resource' : ''}`}>
+            {isMyPlayer || isSpectator ? player.timber : '?'}
           </span>
           <span className="resource-label">木材</span>
         </div>
@@ -393,7 +425,12 @@ export function PlayerPanel({
       {/* Action Phase Actions */}
       {isActionPhase && (
         <div className="action-phase-actions">
-          {!canAct && (
+          {isSpectator && (
+            <div className="spectator-message">
+              👁️ 旁观者模式：您可以查看所有信息，但无法执行行动
+            </div>
+          )}
+          {!isSpectator && !canAct && (
             <div className="waiting-message">
               {!isCurrentTurn ? '⏳ 等待你的回合...' : '⚠️ 无法执行行动'}
             </div>
@@ -463,6 +500,17 @@ export function PlayerPanel({
               </div>
             </>
           )}
+          {/* 结束回合按钮 - 在行动阶段且是当前玩家时显示 */}
+          {canAct && isActionPhase && (
+            <div className="end-turn-section">
+              <button
+                className="end-turn-btn"
+                onClick={() => moves.endTurn?.()}
+              >
+                ✅ 结束回合
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -521,6 +569,31 @@ export function PlayerPanel({
           ))}
         </div>
       </div>
+
+      {/* Cooperative Farmable Cells */}
+      {coopFarmableCells.length > 0 && (
+        <div className="player-cells">
+          <h4>🤝 合作社成员的地块 ({coopFarmableCells.length})</h4>
+          <div className="cells-grid">
+            {coopFarmableCells.map(cell => (
+              <LandCellDisplay
+                key={cell.id}
+                cell={cell}
+                canAct={canAct}
+                isActionPhase={isActionPhase}
+                hasActionsLeft={hasActionsLeft}
+                onExtend={() => moves.extendFarm?.(cell.id)}
+                onAbandon={() => moves.abandonFarm?.(cell.id)}
+                onFarm={() => moves.farmCocoa?.(cell.id)}
+                hasResources={hasResources}
+                playerId={player.id}
+                allPlayers={allPlayers}
+                gameState={gameState}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Town Hall Phase: Living Cost Payment or Send Worker */}
       {isTownHallPhase && isMyPlayer && (
