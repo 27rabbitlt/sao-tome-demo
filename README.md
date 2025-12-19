@@ -1,73 +1,157 @@
-# React + TypeScript + Vite
+# 🏝️ São Tomé Island Farmers
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A multiplayer strategy game based on ecological balance
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 📖 About
 
-## React Compiler
+On the island of São Tomé, you are a farmer struggling to survive. Accumulate wealth by growing cocoa, logging trees, and hunting snails, but beware of ecological pressure! The game tests your resource management skills and strategic planning.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ✨ Features
 
-## Expanding the ESLint configuration
+- 🎮 **Multiple Game Modes**
+  - Local Hotseat: Play face-to-face
+  - Online Multiplayer: Support remote play
+  - Spectator Mode: GM can observe game progress
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 🌍 **Ecological Balance System**
+  - Dynamic tree and snail populations
+  - Environmental penalty mechanism
+  - Living costs vary with ecology
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- 🤝 **Cooperative System**
+  - Join directly in Round 2
+  - Apply to join from Round 3 onwards
+  - Cooperative members can share land resources
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- 📊 **Complete Game Summary**
+  - Ecosystem change tracking
+  - Historical data timeline
+  - Complete game logs
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19 + TypeScript + Vite
+- **Game Engine**: boardgame.io
+- **Styling**: CSS3 (Custom Theme)
+
+## 🚀 Quick Start
+
+### Install Dependencies
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development Mode
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Start both frontend and server (runs simultaneously):
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev:all
 ```
+
+Or start separately:
+
+```bash
+# Start frontend dev server
+npm run dev
+
+# Start game server (new terminal)
+npm run server
+```
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+## 🎯 Game Modes
+
+### Local Hotseat Mode
+
+All players share one device and take turns. Perfect for playing face-to-face with friends.
+
+### Online Multiplayer Mode
+
+**Create Room**:
+1. Select "Create Room" mode
+2. Set number of players (2-5)
+3. Click "Create Room"
+4. Share the room ID with other players
+
+**Join Room**:
+1. Select "Join Room" mode
+2. Enter the room ID
+3. Enter your name
+4. Choose a player slot or join as spectator
+
+## 📁 Project Structure
+
+```
+src/
+├── game/
+│   ├── Board.tsx          # Main game board
+│   ├── PlayerPanel.tsx    # Player panel component
+│   ├── Lobby.tsx          # Game lobby
+│   ├── game.ts            # Game logic definition
+│   ├── game_logic.ts      # Game rules implementation
+│   ├── core_data_structure.ts  # Data structure definitions
+│   └── game.css           # Game styles
+├── App.tsx                # App entry point
+└── main.tsx              # App bootstrap
+
+server/
+└── index.ts              # Game server
+```
+
+## 🎲 Game Rules
+
+### Game Phases
+
+1. **Town Hall Phase** - Pay living costs or send workers to Portugal
+2. **Action Phase** - Execute actions based on worker count
+3. **Secret Action Phase** - All players choose secret actions simultaneously
+4. **Calculation Phase** - Calculate ecological changes and resource updates
+
+### Main Actions
+
+- 🌾 **Farm Cocoa** - Plant on your own land or cooperative members' land
+- 🪓 **Log Trees** - Log in buffer zone to get timber
+- 🐌 **Hunt Snails** - Hunt in core or buffer zone to get cocoa
+- 💰 **Transfer Resources** - Trade resources with other players (with restrictions)
+- 🤝 **Join Cooperative** - Gain cooperative privileges
+
+### Ecological Impact
+
+- Tree count affects snail reproduction
+- Snail count affects living costs
+- Ecological imbalance triggers environmental penalties
+
+## 🔧 Development Notes
+
+### Server Configuration
+
+The default server address is automatically set to the current page URL with port changed to 8000. For example:
+- If accessing `http://example.com:3000`, default server is `http://example.com:8000`
+
+### Requirements
+
+- Node.js 18+
+- npm or yarn
+
+## 📝 License
+
+This project is private.
+
+---
+
+**Enjoy the game!** 🎉
