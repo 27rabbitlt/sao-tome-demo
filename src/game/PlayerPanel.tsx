@@ -344,12 +344,16 @@ export function PlayerPanel({
       <div className="player-resources">
         <div className="resource cocoa">
           <span className="resource-icon">🍫</span>
-          <span className="resource-value">{player.cocoa}</span>
+          <span className={`resource-value ${!isMyPlayer ? 'hidden-resource' : ''}`}>
+            {isMyPlayer ? player.cocoa : '?'}
+          </span>
           <span className="resource-label">可可</span>
         </div>
         <div className="resource timber">
           <span className="resource-icon">🪵</span>
-          <span className="resource-value">{player.timber}</span>
+          <span className={`resource-value ${!isMyPlayer ? 'hidden-resource' : ''}`}>
+            {isMyPlayer ? player.timber : '?'}
+          </span>
           <span className="resource-label">木材</span>
         </div>
         <div className="resource workers">
@@ -390,13 +394,13 @@ export function PlayerPanel({
       {isActionPhase && (
         <div className="action-phase-actions">
           {!canAct && (
-            <div style={{ padding: '10px', background: '#fff3cd', margin: '10px 0' }}>
-              {!isCurrentTurn ? '等待你的回合...' : '无法执行行动'}
+            <div className="waiting-message">
+              {!isCurrentTurn ? '⏳ 等待你的回合...' : '⚠️ 无法执行行动'}
             </div>
           )}
           {canAct && !hasActionsLeft && (
-            <div style={{ padding: '10px', background: '#f8d7da', margin: '10px 0' }}>
-              行动点已用完，请等待回合结束
+            <div className="no-actions-message">
+              ⚠️ 行动点已用完，请等待回合结束
             </div>
           )}
           {canAct && hasActionsLeft && (
