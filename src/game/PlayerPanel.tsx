@@ -1,4 +1,5 @@
 // São Tomé Island Farmers - Player Panel Component
+import { useState } from 'react';
 import type { GameState, Player } from './core_data_structure';
 
 interface PlayerPanelProps {
@@ -117,6 +118,155 @@ function LandCellDisplay({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TransferResourcePanel({
+  player,
+  allPlayers,
+  moves,
+}: {
+  player: Player & { name?: string };
+  allPlayers: (Player & { name?: string })[];
+  moves: PlayerPanelProps['moves'];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [targetPlayerId, setTargetPlayerId] = useState<string>('');
+  const [resource, setResource] = useState<'COCOA' | 'TIMBER'>('COCOA');
+  const [amount, setAmount] = useState<number>(1);
+
+  // Filter out current player from target list
+  const availableTargets = allPlayers.filter(p => p.id !== player.id);
+
+  const handleTransfer = () => {
+    if (!targetPlayerId || amount <= 0) return;
+    
+    // Validate amount limits
+    if (resource === 'COCOA' && amount > 3) {
+      alert('可可单次最多只能转移 3 个');
+      return;
+    }
+    if (resource === 'TIMBER' && amount > 1) {
+      alert('木材单次最多只能转移 1 个');
+      return;
+    }
+
+    // Validate player has enough resources
+    if (resource === 'COCOA' && player.cocoa < amount) {
+      alert('可可数量不足');
+      return;
+    }
+    if (resource === 'TIMBER' && player.timber < amount) {
+      alert('木材数量不足');
+      return;
+    }
+
+    moves.transferResource?.(targetPlayerId, resource, amount);
+    
+    // Reset form
+    setTargetPlayerId('');
+    setAmount(1);
+    setIsOpen(false);
+  };
+
+  const maxAmount = resource === 'COCOA' ? Math.min(3, player.cocoa) : Math.min(1, player.timber);
+  const availableAmount = resource === 'COCOA' ? player.cocoa : player.timber;
+
+  return (
+    <div className="transfer-resource-panel">
+      <button
+        className="action-btn transfer-toggle"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        💰 {isOpen ? '收起' : '转移资源'}
+      </button>
+
+      {isOpen && (
+        <div className="transfer-resource-form">
+          <div className="transfer-form-group">
+            <label>目标玩家</label>
+            <select
+              className="transfer-select"
+              value={targetPlayerId}
+              onChange={(e) => setTargetPlayerId(e.target.value)}
+            >
+              <option value="">选择玩家</option>
+              {availableTargets.map(target => (
+                <option key={target.id} value={String(target.id)}>
+                  {target.name || `玩家 ${target.id + 1}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="transfer-form-group">
+            <label>资源类型</label>
+            <div className="transfer-resource-buttons">
+              <button
+                className={`transfer-resource-btn ${resource === 'COCOA' ? 'active' : ''}`}
+                onClick={() => {
+                  setResource('COCOA');
+                  setAmount(Math.min(amount, Math.min(3, player.cocoa)));
+                }}
+              >
+                🍫 可可 (你有 {player.cocoa})
+              </button>
+              <button
+                className={`transfer-resource-btn ${resource === 'TIMBER' ? 'active' : ''}`}
+                onClick={() => {
+                  setResource('TIMBER');
+                  setAmount(Math.min(amount, Math.min(1, player.timber)));
+                }}
+              >
+                🪵 木材 (你有 {player.timber})
+              </button>
+            </div>
+          </div>
+
+          <div className="transfer-form-group">
+            <label>数量 (最多 {maxAmount})</label>
+            <div className="transfer-amount-controls">
+              <button
+                className="transfer-amount-btn"
+                onClick={() => setAmount(Math.max(1, amount - 1))}
+                disabled={amount <= 1}
+              >
+                −
+              </button>
+              <input
+                type="number"
+                className="transfer-amount-input"
+                min={1}
+                max={maxAmount}
+                value={amount}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 1;
+                  setAmount(Math.max(1, Math.min(val, maxAmount)));
+                }}
+              />
+              <button
+                className="transfer-amount-btn"
+                onClick={() => setAmount(Math.min(maxAmount, amount + 1))}
+                disabled={amount >= maxAmount}
+              >
+                +
+              </button>
+            </div>
+            <div className="transfer-amount-hint">
+              可用: {availableAmount} | 限制: {resource === 'COCOA' ? '最多3' : '最多1'}
+            </div>
+          </div>
+
+          <button
+            className="transfer-submit-btn"
+            onClick={handleTransfer}
+            disabled={!targetPlayerId || amount <= 0 || amount > maxAmount}
+          >
+            ✅ 确认转移 {amount} 个{resource === 'COCOA' ? '可可' : '木材'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -496,6 +646,15 @@ export function PlayerPanel({
               >
                 👷 从葡萄牙赎回工人
               </button>
+            )}
+
+            {/* Transfer Resource */}
+            {allPlayers.length > 1 && (
+              <TransferResourcePanel
+                player={player}
+                allPlayers={allPlayers}
+                moves={moves}
+              />
             )}
               </div>
             </>

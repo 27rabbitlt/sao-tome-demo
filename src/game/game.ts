@@ -95,6 +95,19 @@ export const SaoTomeGame: Game<G> = {
           player.actionsTaken = 0;
         });
         G.logs.push(`进入市政厅讨论阶段 - 第 ${G.round} 轮`);
+        
+        // 如果是第一轮，记录初始状态到历史
+        if (G.round === 1 && G.history.length === 0) {
+          const totalSnails = G.coreSnails + G.bufferSnails;
+          const playersInPortugal = G.players.filter((p) => p.inPortugal > 0).length;
+          G.history.push({
+            round: 0, // 初始状态标记为第0轮
+            coreTrees: G.coreTrees,
+            bufferTrees: G.bufferTrees,
+            totalSnails: totalSnails,
+            playersInPortugal: playersInPortugal,
+          });
+        }
       },
       moves: {
         // 支付生活成本
@@ -315,8 +328,8 @@ export const SaoTomeGame: Game<G> = {
           const currentPlayerId = ctx.currentPlayer;
           const player = G.players.find((p) => p.id === parseInt(currentPlayerId));
           if (!player) {
-      return;
-    }
+            return;
+          }
 
           // 1. 严格的验证逻辑
           
@@ -367,7 +380,7 @@ export const SaoTomeGame: Game<G> = {
 
           // 记录日志
           const resourceName = resource === 'COCOA' ? '可可' : '木材';
-          G.logs.push(`玩家 ${player.id+1} 转让 ${amount} 个${resourceName}给玩家 ${targetPlayerId}`);
+          G.logs.push(`玩家 ${player.id+1} ${player.name} 转让 ${amount} 个${resourceName}给玩家 ${targetPlayer.id + 1} ${targetPlayer?.name}`);
         },
 
         // 伐木（缓冲区）：减少 Buffer Trees，增加 Timber

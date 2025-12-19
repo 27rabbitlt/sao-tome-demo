@@ -111,6 +111,162 @@ function PortugalFamiliesPanel({ players }: { players: GameState['players'] }) {
   );
 }
 
+function DebriefingPanel({ G }: { G: GameState }) {
+  // Find initial state (round 0 or first entry)
+  const initialEntry = G.history.find(h => h.round === 0) || (G.history.length > 0 ? G.history[0] : null);
+  const initialTrees = initialEntry ? initialEntry.coreTrees + initialEntry.bufferTrees : (G.coreTrees + G.bufferTrees);
+  const finalTrees = G.coreTrees + G.bufferTrees;
+  const treeChange = finalTrees - initialTrees;
+
+  const initialSnails = initialEntry ? initialEntry.totalSnails : (G.coreSnails + G.bufferSnails);
+  const finalSnails = G.coreSnails + G.bufferSnails;
+  const snailChange = finalSnails - initialSnails;
+  
+  // Filter out round 0 from timeline display
+  const timelineHistory = G.history.filter(h => h.round > 0);
+
+  return (
+    <div className="debriefing-container">
+      <header className="debriefing-header">
+        <h1>📊 游戏总结</h1>
+        <p className="debriefing-subtitle">Game Debriefing</p>
+      </header>
+
+      <div className="debriefing-content">
+        {/* Ecosystem Changes */}
+        <section className="debriefing-section">
+          <h2>🌍 生态系统变化</h2>
+          
+          <div className="ecosystem-changes">
+            <div className="change-item">
+              <div className="change-header">
+                <span className="change-icon">🌲</span>
+                <span className="change-label">树木总数</span>
+              </div>
+              <div className="change-values">
+                <span className="change-initial">{initialTrees}</span>
+                <span className="change-arrow">→</span>
+                <span className={`change-final ${treeChange >= 0 ? 'positive' : 'negative'}`}>
+                  {finalTrees}
+                </span>
+                <span className={`change-delta ${treeChange >= 0 ? 'positive' : 'negative'}`}>
+                  ({treeChange >= 0 ? '+' : ''}{treeChange})
+                </span>
+              </div>
+            </div>
+
+            <div className="change-item">
+              <div className="change-header">
+                <span className="change-icon">🐌</span>
+                <span className="change-label">蜗牛总数</span>
+              </div>
+              <div className="change-values">
+                <span className="change-initial">{initialSnails}</span>
+                <span className="change-arrow">→</span>
+                <span className={`change-final ${snailChange >= 0 ? 'positive' : 'negative'}`}>
+                  {finalSnails}
+                </span>
+                <span className={`change-delta ${snailChange >= 0 ? 'positive' : 'negative'}`}>
+                  ({snailChange >= 0 ? '+' : ''}{snailChange})
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* History Timeline */}
+          {(timelineHistory.length > 0 || initialEntry) && (
+            <div className="history-timeline">
+              <h3>📈 历史变化</h3>
+              <div className="timeline-table">
+                <div className="timeline-header">
+                  <span>回合</span>
+                  <span>核心树木</span>
+                  <span>缓冲树木</span>
+                  <span>总树木</span>
+                  <span>总蜗牛</span>
+                  <span>在葡萄牙</span>
+                </div>
+                {/* Initial state */}
+                {initialEntry && (
+                  <div className="timeline-row initial">
+                    <span className="timeline-round">初始</span>
+                    <span>{initialEntry.coreTrees}</span>
+                    <span>{initialEntry.bufferTrees}</span>
+                    <span className="timeline-total">{initialEntry.coreTrees + initialEntry.bufferTrees}</span>
+                    <span>{initialEntry.totalSnails}</span>
+                    <span>{initialEntry.playersInPortugal} 人</span>
+                  </div>
+                )}
+                {/* Round history */}
+                {timelineHistory.map((entry, index) => (
+                  <div key={index} className="timeline-row">
+                    <span className="timeline-round">第 {entry.round} 轮</span>
+                    <span>{entry.coreTrees}</span>
+                    <span>{entry.bufferTrees}</span>
+                    <span className="timeline-total">{entry.coreTrees + entry.bufferTrees}</span>
+                    <span>{entry.totalSnails}</span>
+                    <span>{entry.playersInPortugal} 人</span>
+                  </div>
+                ))}
+                {/* Final state */}
+                <div className="timeline-row final">
+                  <span className="timeline-round">最终</span>
+                  <span>{G.coreTrees}</span>
+                  <span>{G.bufferTrees}</span>
+                  <span className="timeline-total">{G.coreTrees + G.bufferTrees}</span>
+                  <span>{G.coreSnails + G.bufferSnails}</span>
+                  <span>{G.players.filter(p => p.inPortugal > 0).length} 人</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Game Logs */}
+        <section className="debriefing-section">
+          <h2>📝 完整游戏日志</h2>
+          <div className="debriefing-logs">
+            {G.logs.length > 0 ? (
+              G.logs.map((log, index) => (
+                <div key={index} className="debriefing-log-entry">
+                  {log}
+                </div>
+              ))
+            ) : (
+              <div className="debriefing-log-entry empty">暂无日志</div>
+            )}
+          </div>
+        </section>
+
+        {/* Final Player Status */}
+        <section className="debriefing-section">
+          <h2>👥 最终玩家状态</h2>
+          <div className="final-players">
+            {G.players.map((player) => (
+              <div key={player.id} className="final-player-card">
+                <div className="final-player-header">
+                  <span className="final-player-name">{player.name || `玩家 ${player.id + 1}`}</span>
+                  {player.inPortugal > 0 && (
+                    <span className="final-player-status">🇵🇹 在葡萄牙 ({player.inPortugal} 人)</span>
+                  )}
+                </div>
+                <div className="final-player-resources">
+                  <span className="final-resource">🍫 可可: {player.cocoa}</span>
+                  <span className="final-resource">🪵 木材: {player.timber}</span>
+                  <span className="final-resource">👷 工人: {player.workers}</span>
+                  {player.joinCoop && (
+                    <span className="final-resource coop">🤝 合作社成员</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function CooperativeMembersPanel({ 
   players, 
   coopMembers 
@@ -300,6 +456,15 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
     endTurn: () => moves.endTurn?.(),
     setMyName: (name: string) => moves.setMyName?.(name),
   };
+
+  // Show debriefing if game is over
+  if (G.phase === 'gameOver') {
+    return (
+      <div className="sao-tome-board">
+        <DebriefingPanel G={G} />
+      </div>
+    );
+  }
 
   return (
     <div className="sao-tome-board">
