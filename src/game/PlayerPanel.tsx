@@ -19,6 +19,8 @@ interface PlayerPanelProps {
     doNothing?: () => void;
     steal?: (targetPlayerId: number, amount: number) => void;
     illegalLog?: (zone: 'CORE' | 'BUFFER', amount: number) => void;
+    payLivingCost?: () => void;
+    sendWorkerToPortugal?: () => void;
   };
   allPlayers: (Player & { name?: string })[];
 }
@@ -102,6 +104,68 @@ function LandCellDisplay({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TownHallPanel({
+  moves,
+  canAct,
+  livingCostTimber,
+  livingCostCocoa,
+  canAffordLivingCost,
+  canSendWorker,
+  hasChosen,
+}: {
+  moves: {
+    payLivingCost?: () => void;
+    sendWorkerToPortugal?: () => void;
+  };
+  canAct: boolean;
+  livingCostTimber: number;
+  livingCostCocoa: number;
+  canAffordLivingCost: boolean;
+  canSendWorker: boolean;
+  hasChosen: boolean;
+}) {
+  return (
+    <div className="townhall-panel">
+      <h4>🏛️ 市政厅讨论</h4>
+      <div className="townhall-options">
+        <div className="living-cost-info">
+          <p className="cost-label">本回合生活成本：</p>
+          <p className="cost-details">
+            {livingCostTimber} 木材 + {livingCostCocoa} 可可
+          </p>
+        </div>
+        
+        <div className="townhall-buttons">
+          <button
+            className={`action-btn pay-cost ${!canAffordLivingCost ? 'disabled' : ''} ${hasChosen ? 'disabled' : ''}`}
+            onClick={() => moves.payLivingCost?.()}
+            disabled={!canAct || !canAffordLivingCost || hasChosen}
+          >
+            💰 支付生活成本
+            {!canAffordLivingCost && <span className="hint"> (资源不足)</span>}
+          </button>
+          
+          <button
+            className={`action-btn send-worker ${!canSendWorker ? 'disabled' : ''} ${hasChosen ? 'disabled' : ''}`}
+            onClick={() => moves.sendWorkerToPortugal?.()}
+            disabled={!canAct || !canSendWorker || hasChosen}
+          >
+            🚢 送工人去葡萄牙
+            {/* {!canSendWorker && <span className="hint"> (至少保留1个工人)</span>} */}
+            {canSendWorker && <span className="hint"> (免生活成本，但工人-1)</span>}
+          </button>
+        </div>
+        
+        {hasChosen && (
+          <div className="choice-confirmed">
+            <span className="status ready">✓ 已做出选择</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -238,10 +302,19 @@ export function PlayerPanel({
 
   const isActionPhase = gameState.phase === 'action';
   const isSecretPhase = gameState.phase === 'secret';
+  const isTownHallPhase = gameState.phase === 'townHall';
   const hasActionsLeft = (player.actionsTaken || 0) < (player.workers || 0);
   const remainingActions = (player.workers || 0) - (player.actionsTaken || 0);
   const hasResources = (player.timber || 0) >= 1 && (player.cocoa || 0) >= 1;
   const isInCoop = (gameState.coopMembers || []).includes(String(player.id));
+  
+  // 计算生活成本
+  const livingCostTimber = gameState.livingCost?.timber || 1;
+  const livingCostCocoa = (gameState.livingCost?.cocoa || 1) * player.workers + (gameState.taxPenalty || 0);
+  const canAffordLivingCost = (player.timber || 0) >= livingCostTimber && (player.cocoa || 0) >= livingCostCocoa;
+  // const canSendWorker = (player.workers || 0) > 1; // 至少需要保留1个工人
+  const canSendWorker = true;
+  const hasChosen = player.actionsTaken > 0; // 已做出选择
 
   // Get player's owned cells (with safety check)
   const cells = gameState.cells || [];
@@ -256,7 +329,7 @@ export function PlayerPanel({
           {player.name || `玩家 ${player.id + 1}`}
           {isMyPlayer && ' (你)'}
           {isCurrentTurn && ' (当前回合)'}
-          {player.inPortugal > 0 && ' 🇵🇹 在葡萄牙'}
+          {player.inPortugal > 0 && ' 家庭分离 💔'}
         </h3>
         {isActionPhase && (
           <span className="action-points">
@@ -391,18 +464,18 @@ export function PlayerPanel({
 
       {/* Town Hall Phase Info */}
       {gameState.phase === 'townHall' && (
-        <div className="town-hall-info" style={{ padding: '15px', background: '#e7f3ff', margin: '10px 0', borderRadius: '5px' }}>
+        <div className="town-hall-info">
           <h4>🏛️ 市政厅讨论阶段</h4>
-          <p>正在处理生活成本支付和特殊事件...</p>
-          <p>请稍候，即将进入行动阶段</p>
+          <p className="processing-message">正在处理生活成本支付和特殊事件...</p>
+          <p className="processing-message">请稍候，即将进入行动阶段</p>
         </div>
       )}
 
       {/* Calculation Phase Info */}
       {gameState.phase === 'calculation' && (
-        <div className="calculation-info" style={{ padding: '15px', background: '#fff3cd', margin: '10px 0', borderRadius: '5px' }}>
+        <div className="calculation-info">
           <h4>📊 结算阶段</h4>
-          <p>正在计算生态变化和资源更新...</p>
+          <p className="processing-message">正在计算生态变化和资源更新...</p>
         </div>
       )}
 
@@ -444,6 +517,30 @@ export function PlayerPanel({
           ))}
         </div>
       </div>
+
+      {/* Town Hall Phase: Living Cost Payment or Send Worker */}
+      {isTownHallPhase && isMyPlayer && (
+        <TownHallPanel
+          moves={moves}
+          canAct={canAct}
+          livingCostTimber={livingCostTimber}
+          livingCostCocoa={livingCostCocoa}
+          canAffordLivingCost={canAffordLivingCost}
+          canSendWorker={canSendWorker}
+          hasChosen={hasChosen}
+        />
+      )}
+
+      {/* Town Hall Phase: Waiting indicator for other players */}
+      {isTownHallPhase && !isMyPlayer && (
+        <div className="townhall-status-indicator">
+          {hasChosen ? (
+            <span className="status ready">✓ 已做出选择</span>
+          ) : (
+            <span className="status waiting">⏳ 等待选择...</span>
+          )}
+        </div>
+      )}
 
       {/* Secret Phase: Action Selection */}
       {isSecretPhase && isMyPlayer && (

@@ -203,18 +203,18 @@ export function calculateSnailPopulation(snails: number, trees: number, zone: 'C
     let timberCost = 1;
     let cocoaCost = 1;
   
-    // 根据总蜗牛数检查临界点，累加 cocoaCost
-    // 注意：从最严格的条件开始检查（累积效应）
-    if (totalSnails <= 4) {
-      // 临界点 3: 总蜗牛数 <= 4 -> 税收 +3 Cocoa (共 +3)
-      cocoaCost += 3;
-    } else if (totalSnails <= 7) {
-      // 临界点 2: 总蜗牛数 <= 7 -> 税收 +2 Cocoa (共 +2)
-      cocoaCost += 2;
-    } else if (totalSnails <= 11) {
-      // 临界点 1: 总蜗牛数 <= 11 -> 税收 +1 Cocoa
-      cocoaCost += 1;
-    }
+    // // 根据总蜗牛数检查临界点，累加 cocoaCost
+    // // 注意：从最严格的条件开始检查（累积效应）
+    // if (totalSnails <= 4) {
+    //   // 临界点 3: 总蜗牛数 <= 4 -> 税收 +3 Cocoa (共 +3)
+    //   cocoaCost += 3;
+    // } else if (totalSnails <= 7) {
+    //   // 临界点 2: 总蜗牛数 <= 7 -> 税收 +2 Cocoa (共 +2)
+    //   cocoaCost += 2;
+    // } else if (totalSnails <= 11) {
+    //   // 临界点 1: 总蜗牛数 <= 11 -> 税收 +1 Cocoa
+    //   cocoaCost += 1;
+    // }
     // 如果 totalSnails > 11，只使用基础成本
     
     return { timber: timberCost, cocoa: cocoaCost };
@@ -269,7 +269,7 @@ export function calculateSnailPopulation(snails: number, trees: number, zone: 'C
           // 如果没被抓，减少树木，增加 Timber
           G.coreTrees = Math.max(0, G.coreTrees - successfulCuts);
           player.timber += successfulCuts;
-          G.logs.push(`玩家 ${player.id+1} 非法伐木 ${successfulCuts} 棵，获得 ${successfulCuts} 个木材`);
+          // G.logs.push(`玩家 ${player.id+1} 非法伐木 ${successfulCuts} 棵，获得 ${successfulCuts} 个木材`);
         }
       }
     });
@@ -305,7 +305,7 @@ export function calculateSnailPopulation(snails: number, trees: number, zone: 'C
         // 冲突判定：如果目标被偷次数 > 1，则偷窃失败（互相发现）
         if (stealCount > 1) {
           // 所有针对该受害者的"小偷"都空手而归
-          G.logs.push(`玩家 ${thief.id+1} 和他人同时偷窃玩家 ${targetId+1}，互相发现，偷窃失败`);
+          G.logs.push(`有多人同时偷窃某玩家，互相发现，偷窃失败`);
           // thief 获得 0（不需要操作，因为已经是 0）
         } else {
           // 成功偷窃：如果目标被偷次数 == 1
@@ -316,9 +316,9 @@ export function calculateSnailPopulation(snails: number, trees: number, zone: 'C
             // 执行转账
             target.cocoa -= actualSteal;
             thief.cocoa += actualSteal;
-            G.logs.push(`玩家 ${thief.id+1} 从玩家 ${targetId+1} 偷窃了 ${actualSteal} 个可可`);
+            // G.logs.push(`玩家 ${thief.id+1} 从玩家 ${targetId+1} 偷窃了 ${actualSteal} 个可可`);
           } else {
-            G.logs.push(`玩家 ${thief.id+1} 试图偷窃玩家 ${targetId+1}，但目标没有可可`);
+            // G.logs.push(`玩家 ${thief.id+1} 试图偷窃玩家 ${targetId+1}，但目标没有可可`);
           }
         }
       }

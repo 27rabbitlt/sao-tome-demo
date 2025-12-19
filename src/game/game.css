@@ -1721,6 +1721,334 @@ body {
   line-height: 1.5;
 }
 
+/* Town Hall Panel */
+.townhall-panel {
+  margin-top: 20px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 152, 0, 0.2) 100%);
+  border-radius: var(--radius-lg);
+  border: 2px solid rgba(255, 193, 7, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.townhall-panel h4 {
+  color: #fff;
+  margin: 0 0 20px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(255, 193, 7, 0.5);
+  letter-spacing: 0.5px;
+}
+
+.townhall-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.living-cost-info {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.cost-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.cost-details {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(255, 193, 7, 0.4);
+}
+
+.townhall-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-btn.pay-cost {
+  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+  border: 2px solid rgba(76, 175, 80, 0.6);
+  color: white;
+  font-weight: 700;
+  padding: 16px 24px;
+  font-size: 1.1rem;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.action-btn.pay-cost:hover:not(:disabled) {
+  background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+  border-color: rgba(76, 175, 80, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 16px rgba(76, 175, 80, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.action-btn.send-worker {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  border: 2px solid rgba(33, 150, 243, 0.6);
+  color: white;
+  font-weight: 700;
+  padding: 16px 24px;
+  font-size: 1.1rem;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.action-btn.send-worker:hover:not(:disabled) {
+  background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
+  border-color: rgba(33, 150, 243, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 16px rgba(33, 150, 243, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.action-btn .hint {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+.choice-confirmed {
+  text-align: center;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.choice-confirmed .status.ready {
+  color: #4caf50;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(76, 175, 80, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(76, 175, 80, 0.15);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+/* Town Hall Status Indicator */
+.townhall-status-indicator {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.townhall-status-indicator .status {
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+}
+
+.townhall-status-indicator .status.ready {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.townhall-status-indicator .status.waiting {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Portugal Panel */
+.portugal-panel {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-medium);
+}
+
+.portugal-panel h3 {
+  color: var(--color-sand);
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portugal-families-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portugal-family-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.portugal-family-item:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.1) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-medium);
+}
+
+.portugal-family-item.empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.portugal-family-item.empty:hover {
+  transform: none;
+}
+
+.family-name {
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.family-workers {
+  color: var(--color-gold);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.15);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+/* Phase Indicator - Town Hall specific */
+.phase-indicator.phase-townHall {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.4) 0%, rgba(255, 152, 0, 0.3) 100%);
+  border: 2px solid rgba(255, 193, 7, 0.6);
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
+}
+
+.phase-indicator.phase-townHall .phase-name {
+  color: #fff;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(255, 193, 7, 0.4);
+}
+
+.phase-indicator.phase-townHall .phase-description {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 500;
+}
+
+/* Town Hall & Calculation Info Panels */
+.town-hall-info,
+.calculation-info {
+  margin: 20px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 152, 0, 0.2) 100%);
+  border-radius: var(--radius-lg);
+  border: 2px solid rgba(255, 193, 7, 0.4);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.calculation-info {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.25) 0%, rgba(123, 31, 162, 0.2) 100%);
+  border-color: rgba(156, 39, 176, 0.4);
+}
+
+.town-hall-info h4,
+.calculation-info h4 {
+  color: #fff;
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(255, 193, 7, 0.4);
+  text-align: center;
+}
+
+.calculation-info h4 {
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(156, 39, 176, 0.4);
+}
+
+/* Processing messages - make them more visible */
+.processing-message {
+  color: #fff !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(255, 255, 255, 0.3) !important;
+  margin: 12px 0 !important;
+  padding: 14px 18px !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  text-align: center !important;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
 /* Responsive Design */
 @media (max-width: 900px) {
   .game-header h1 {

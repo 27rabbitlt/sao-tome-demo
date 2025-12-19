@@ -85,7 +85,7 @@ export function Lobby({ onStartGame }: LobbyProps) {
       
       const matchData = await response.json();
       setPendingMatchID(matchID.trim());
-      setPendingNumPlayers(matchData.ctx?.numPlayers || 2);
+      setPendingNumPlayers(matchData.ctx?.numPlayers || 5);
     } catch (err) {
       setError('找不到该房间，请检查房间ID是否正确');
     } finally {

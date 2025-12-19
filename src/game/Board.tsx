@@ -71,6 +71,46 @@ function GameLog({ logs }: { logs: string[] }) {
   );
 }
 
+function PortugalFamiliesPanel({ players }: { players: GameState['players'] }) {
+  // 统计每个家庭在葡萄牙的人数
+  const familiesInPortugal = players
+    .filter((p) => p.inPortugal > 0)
+    .map((p) => ({
+      playerId: p.id,
+      playerName: p.name || `玩家 ${p.id + 1}`,
+      workersInPortugal: p.inPortugal,
+    }));
+
+  if (familiesInPortugal.length === 0) {
+    return (
+      <div className="portugal-panel">
+        <h3>🇵🇹 葡萄牙家庭</h3>
+        <div className="portugal-families-list">
+          <div className="portugal-family-item empty">
+            <span>目前没有家庭在葡萄牙</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="portugal-panel">
+      <h3>🇵🇹 葡萄牙家庭</h3>
+      <div className="portugal-families-list">
+        {familiesInPortugal.map((family) => (
+          <div key={family.playerId} className="portugal-family-item">
+            <span className="family-name">{family.playerName}</span>
+            <span className="family-workers">
+              {family.workersInPortugal} {family.workersInPortugal === 1 ? '人' : '人'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CurrentTurnIndicator({
   currentPlayerId,
   currentPlayer,
@@ -206,6 +246,8 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
     doNothing: () => moves.doNothing?.(),
     steal: (targetPlayerId: number, amount: number) => moves.steal?.(targetPlayerId, amount),
     illegalLog: (zone: 'CORE' | 'BUFFER', amount: number) => moves.illegalLog?.(zone, amount),
+    payLivingCost: () => moves.payLivingCost?.(),
+    sendWorkerToPortugal: () => moves.sendWorkerToPortugal?.(),
     setMyName: (name: string) => moves.setMyName?.(name),
   };
 
@@ -264,6 +306,9 @@ export function SaoTomeBoard({ G, ctx, moves, playerID, hotseatMode, playerNames
 
         <aside className="game-sidebar">
           <GameLog logs={G.logs} />
+          
+          {/* 葡萄牙家庭人数显示 */}
+          <PortugalFamiliesPanel players={G.players} />
           
           <div className="game-rules-hint">
             <h4>💡 游戏规则</h4>
