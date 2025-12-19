@@ -21,11 +21,19 @@ export interface GameConfig {
 const DEFAULT_NAMES = ['阿明', '小红', '老王', '阿花', '大壮'];
 
 export function Lobby({ onStartGame }: LobbyProps) {
+  // 获取默认服务器URL：当前页面的URL，但端口改为8000
+  const getDefaultServerUrl = () => {
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      return `${currentUrl.protocol}//${currentUrl.hostname}:8000`;
+    }
+    return 'http://localhost:8000';
+  };
+
   const [mode, setMode] = useState<GameMode>('hotseat');
   const [numPlayers, setNumPlayers] = useState(2);
   const [playerNames, setPlayerNames] = useState<string[]>(DEFAULT_NAMES.slice(0, 5));
-  const [serverUrl, setServerUrl] = useState('http://localhost:8000');
-  // const [serverUrl, setServerUrl] = useState('http://192.168.0.102:8000');
+  const [serverUrl, setServerUrl] = useState(getDefaultServerUrl());
   const [matchID, setMatchID] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
